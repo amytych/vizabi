@@ -39,6 +39,7 @@ module.exports = function(grunt) {
         // 'requirejs:dist', //use requirejs for amd module
         'sass:dist', //compile scss
         'examples', //build examples
+        'requirejs:js'
 
     ]);
 
@@ -168,6 +169,29 @@ module.exports = function(grunt) {
                     out: "dist/vizabi.js",
                     optimize: "none",
                     generateSourceMaps: true
+                }
+            },
+            js: {
+                options: {
+                    'baseUrl': '',
+                    'mainConfigFile': 'src/re-config.js',
+                    'include': ['src/vizabi'],
+                    'out': 'build/vizabi-cleaned/exampleLib.js',
+                    'onModuleBundleComplete': function(data) {
+                        var fs = require('fs'),
+                            amdclean = require('amdclean'),
+                            outputFile = data.path;
+
+                        fs.writeFileSync(outputFile, amdclean.clean({
+                            'filePath': outputFile,
+                            'globalModules': ['src/vizabi'],
+                            'wrap': {
+                                'start': '(function(){\n',
+                                'end': '\n}());}'
+                            }
+                        }));
+                    },
+                    optimize: 'none'
                 }
             }
         }

@@ -98,7 +98,7 @@ define([], function() {
                 min_width: 970,
                 max_width: Infinity,
             }
-        }
+        }     
     };
     return configs;
 });

@@ -1,47 +1,31 @@
-(function(root) {
+require(["base/core"], function(Core) {
 
-    /*
-     * Vizabi initialization
-     */
     var Vizabi = function(name, container, options) {
         var _this = this,
             core;
 
-        //TODO: avoid loading requirejs more than once
-        //add requireJS
-        getScript("../../lib/requirejs/require.js", function() {
-            //load configuration and paths
+        core = new Core();
 
-            //TODO: config should have a base url...
-            require(["../../dist/config"], function(config) {
-                //config is now available
-                require.config(config.require);
-                //start vizabi
-                require(["base/core"], function(Core) {
-                    core = new Core();
+        //start core
+        var promise = core.start(name,
+            container,
+            options);
 
-                    //start core
-                    var promise = core.start(name,
-                        container,
-                        options);
+        //tell external page that vizabi is ready
+        promise.then(
+            function() {
+                if (typeof options.ready === "function") {
+                    options.ready();
+                }
+            },
+            //or tell external page that there's an error
 
-                    //tell external page that vizabi is ready
-                    promise.then(
-                        function() {
-                            if (typeof options.ready === "function") {
-                                options.ready();
-                            }
-                        },
-                        //or tell external page that there's an error
-
-                        function(err) {
-                            if (typeof options.ready === "function") {
-                                options.ready(err);
-                            }
-                        });
-                });
-            });
-        });
+            function(err) {
+                if (typeof options.ready === "function") {
+                    options.ready(err);
+                }
+            }
+        );
 
         //placeholder identifies the tool
         this.setOptions = function(placeholder, opts) {
@@ -49,35 +33,5 @@
         };
     };
 
-    /*
-     * Make Vizabi global
-     */
-    root.Vizabi = root.Vizabi || Vizabi;
-
-
-    //inject script
-    var loaded_scripts = [];
-
-    function getScript(src, loaded) {
-
-        if (loaded_scripts.indexOf(src) != -1) {
-            if (typeof loaded === "function") {
-                loaded();
-            }
-        } else {
-            loaded_scripts.push(src);
-            script = document.createElement('script');
-            script.type = 'text/javascript';
-            script.async = true;
-            script.onload = function() {
-                if (typeof loaded === "function") {
-                    loaded();
-                }
-            };
-            script.src = src;
-            document.getElementsByTagName('head')[0].appendChild(script);
-        }
-    }
-
-
-})(window);
+    return Vizabi;
+});
