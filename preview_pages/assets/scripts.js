@@ -6,7 +6,7 @@ function randomSize(id) {
     var width = Math.floor(Math.random() * 800) + 300;
     var height = Math.floor(Math.random() * 500) + 300;
     var container = document.getElementById(id);
-    
+
     setSize(id, width, height);
 
     forceResizeEvt();
@@ -80,6 +80,7 @@ function forceState(id, state) {
 }
 
 function showState(state, id) {
+    console.log('dupa');
     if (!id) {
         id = "state";
     }
@@ -125,6 +126,8 @@ function parseURL() {
 
         url.state = state;
         url.lang = options.lang;
+
+        forceState
 
         setSize(placeholder, options.width, options.height, options.fullscreen);
 
@@ -202,5 +205,7 @@ $(function() {
         // all dropdowns
         $('.wrapper-dropdown').removeClass('active');
     });
+
+    window.onhashchange = parseURL;
 
 });

@@ -20,10 +20,10 @@ define([
             '1000000': 'million'
         },
         infoTemplate = _.template([
-            '<div id="<%= id %>">',
-                '<a href="#" class="info-box-close">x</a>',
-                '<div class="info-box-placeholder"><%= indicator %> for <%= name %>: <%= total %> <%= unitLabel %></div>',
-                '<div class="info-box-placeholder"><%= percent %>% of the World</div>',
+            '<div id="vzb-info-<%= id %>">',
+                '<a href="#" class="vzb-info-box-close">x</a>',
+                '<div class="vzb-info-box-placeholder"><%= indicator %> for <%= name %>: <%= total %> <%= unitLabel %></div>',
+                '<div class="vzb-info-box-placeholder"><%= percent %>% of the World</div>',
             '</div>'].join(''));
 
     var InfoBox = Component.extend({
@@ -37,13 +37,13 @@ define([
         postRender: function() {
             var _this = this;
 
-            $infoWrapper = $('#info-box-wrapper');
+            $infoWrapper = $('#vzb-info-box-wrapper');
 
             // Subscribe to events
             _this.events.bind('item:selected', _this.updateSelectedInfo.bind(_this));
             _this.events.bind('item:deselected', _this.deselectedHandler.bind(_this));
 
-            $infoWrapper.on('click', '.info-box-close', function (event) {
+            $infoWrapper.on('click', '.vzb-info-box-close', function (event) {
                 event.preventDefault();
                 _this.deselectedHandler($(this).parent().data('selected'));
             });
@@ -86,7 +86,7 @@ define([
         updateSelectedInfo: function (selected) {
             // TODO: Waiting for a final solution for double fired events
             // for now this simple check will prevent double update
-            if ($('#info-' + selected).length) {
+            if ($('#vzb-info-' + selected).length) {
                 return;
             }
 
@@ -100,7 +100,7 @@ define([
                     total: this.getFormattedValue(value),
                     percent: percent,
                     unitLabel: unitLabel,
-                    id: 'info-' + selected
+                    id: selected
                 }
 
             $(infoTemplate(templateData))
@@ -108,7 +108,7 @@ define([
                 .prependTo($infoWrapper)
                 .fadeIn(150);
 
-            $('#info-top5').remove();
+            $('#vzb-info-top5').remove();
 
             selectedItems.push(selected);
             selectedItems = _.uniq(selectedItems);
@@ -117,7 +117,7 @@ define([
         deselectedHandler: function (item) {
             selectedItems = _.reject(selectedItems, function (i) { return i === item; });
 
-            $('#info-' + item).fadeOut(150, function () { this.remove(); });
+            $('#vzb-info-' + item).fadeOut(150, function () { this.remove(); });
 
             if (selectedItems.length) {
                 this.updateSelectedInfo(_.last(selectedItems));
@@ -135,7 +135,7 @@ define([
                     total: this.getFormattedValue(top5Value),
                     percent: top5Percent,
                     unitLabel: unitLabel,
-                    id: 'info-top5'
+                    id: 'top5'
                 }
 
             $infoWrapper.empty();

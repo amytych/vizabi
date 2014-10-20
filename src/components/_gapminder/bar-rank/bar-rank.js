@@ -32,21 +32,21 @@ define([
             var _this = this;
 
             // Get the wrapper ref
-            $barRankWrapper = $('#bar-rank-wrapper');
+            $barRankWrapper = $('#vzb-bar-rank-wrapper');
 
             // Get header refs
-            $headerName = $('#header-name');
-            $headerRank = $('#header-rank');
-            $headerIndicator = $('#header-indicator');
+            $headerName = $('#vzb-bar-rank-header-name');
+            $headerRank = $('#vzb-bar-rank-header-rank');
+            $headerIndicator = $('#vzb-bar-rank-header-indicator');
 
             // Subscribe to events
             _this.events.bind('item:filtered', _this.triggerSelect.bind(_this));
             _this.events.bind('infobox:closed', _this.triggerDeselect.bind(_this));
 
              // Initialize SVG and place
-            svg = d3.select('#bar-rank-chart-holder').append('svg');
+            svg = d3.select('#vzb-bar-rank-chart-holder').append('svg');
             itemsHolder = svg.append('g')
-                .attr('class', 'items-wrapper')
+                .attr('class', 'vzb-bar-rank-items-wrapper')
                 .on('click', function(d) {
                     var $target = $(d3.event.target)
                         item = $target.parent('.item');
@@ -66,7 +66,7 @@ define([
             // Define gradient fading the long names
             gradient = svg.append("svg:defs")
                 .append("svg:linearGradient")
-                .attr("id", "name-cover");
+                .attr("id", "vzb-bar-rank-name-cover-gradient");
 
             // Define the gradient colors
             gradient.append("svg:stop")
@@ -113,50 +113,48 @@ define([
                 .domain([minX, maxX]);
 
             // Add labeled bars for each item
-            item = itemsHolder.selectAll('.item')
+            item = itemsHolder.selectAll('.vzb-bar-rank-item')
                 .data(displayData, function (d) { return d.geo; });
 
             itemEnter = item
                 .enter().append('g')
-                .attr('class', 'item')
+                .attr('class', 'vzb-bar-rank-item')
                 .attr('id', function (d) { return d.geo; });
 
             // Item background it makes the whole "row" clickable
             itemEnter.append('rect')
-                .attr('class', 'item-bg');
+                .attr('class', 'vzb-bar-rank-item-bg');
 
             // Item name
             itemEnter.append('text')
-                .attr('class', 'name-label')
-                .attr('title', function (d) { return d['geo.name']})
-                .text(function (d) { return d['geo.name']});
+                .attr('class', 'vzb-bar-rank-item-name')
+                .attr('title', function (d) { return d['geo.name']; })
+                .text(function (d) { return d['geo.name']; });
 
             // Item rank
             itemEnter.append('text')
-                .attr('class', 'item-rank')
+                .attr('class', 'vzb-bar-rank-item-rank')
                 .attr('text-anchor', 'middle')
-                .text(function(item, i) {
-                    return i + 1;
-                });
+                .text(function(item, i) { return i + 1; });
 
             // Fade out the long name
             itemEnter.append('rect')
-                .attr('class', 'name-cover')
-                .attr('fill', 'url(#name-cover)');
+                .attr('class', 'vzb-bar-rank-item-name-cover')
+                .attr('fill', 'url(#vzb-bar-rank-name-cover-gradient)');
 
             // Cover for the name if it's too long when it slips into the bar area
             itemEnter.append('rect')
-                .attr('class', 'bar-bg');
+                .attr('class', 'vzb-bar-rank-item-bar-bg');
 
             // Item bar
             itemEnter.append('rect')
-                .attr('class', 'bar');
+                .attr('class', 'vzb-bar-rank-item-bar');
 
             // Item value
             itemEnter.append('text')
                 .attr('dx', 5)
                 .attr('text-anchor', 'start')
-                .attr('class', 'value-label')
+                .attr('class', 'vzb-bar-rank-item-value')
                 .text(_this.getValue);
 
             // Remove bars for removed data
@@ -164,17 +162,15 @@ define([
 
             // Update bars for changed data
             // Item name
-            item.select('.name-label')
+            item.select('.vzb-bar-rank-item-name')
                 .text(function (d) { return d['geo.name']});
 
             // Item rank
-            item.select('.item-rank')
-                .text(function(item, i) {
-                    return i + 1;
-                });
+            item.select('.vzb-bar-rank-item-rank')
+                .text(function(item, i) { return i + 1; });
 
             // Item value
-            item.select('.value-label')
+            item.select('.vzb-bar-rank-item-value')
                 .text(_this.getValue);
 
             this.resize();
@@ -259,42 +255,42 @@ define([
                     return 'translate(0,' + (i * itemHeight) + ')';
                 });
 
-            item.select('.name-label')
+            item.select('.vzb-bar-rank-item-name')
                 .attr('x', nameOffset + rankOffset)
                 .attr('y', _this.getTextPosition)
                 .attr('width', nameOffset + nameWidth);
 
             // Item rank
-            item.select('.item-rank')
+            item.select('.vzb-bar-rank-item-rank')
                 .attr('x', rankOffset)
                 .attr('y', _this.getTextPosition);
 
-            item.select('.name-cover')
+            item.select('.vzb-bar-rank-item-name-cover')
                 .attr('x', barOffset - 30)
                 .attr('y', 0)
                 .attr('height', itemHeight)
                 .attr('width', 30);
 
-            item.select('.item-bg')
+            item.select('.vzb-bar-rank-item-bg')
                 .attr('x', 0)
                 .attr('y', 0)
                 .attr('height', itemHeight)
                 .attr('width', width);
 
-            item.select('.bar-bg')
+            item.select('.vzb-bar-rank-item-bar-bg')
                 .attr('x', barOffset)
                 .attr('y', 0)
                 .attr('height', itemHeight)
                 .attr('width', width - totalOffset);
 
-            item.select('.bar')
+            item.select('.vzb-bar-rank-item-bar')
                 .attr('x', barOffset)
                 .attr('y', (itemHeight - barHeight) / 2)
                 .attr('height', barHeight)
                 .attr('width', function (d) { return x(d[indicator] || 0); });
 
             // Item value
-            item.select('.value-label')
+            item.select('.vzb-bar-rank-item-value')
                 .attr('x', function(d) { return x(d[indicator] || 0) + barOffset; })
                 .attr('y', _this.getTextPosition);
         },
@@ -319,14 +315,10 @@ define([
                     return 'translate(0, ' + (i * itemHeight) + ')';
                 });
 
-            item.select('.item-rank')
+            item.select('.vzb-bar-rank-item-rank')
                 .text(function(item, i) {
                     return i + 1;
                 });
-        },
-
-        updateDetails: function (d) {
-            $('#details').html(d['geo.name']);
         },
 
         triggerSelect: function (id) {
@@ -348,16 +340,16 @@ define([
             selectedItems.push(id);
             selectedItems = _.uniq(selectedItems);
 
-            itemsHolder.selectAll('.item')
+            itemsHolder.selectAll('.vzb-bar-rank-item')
                 .filter(function (d, i) {
                     return selectedItems.indexOf(d.geo) === -1;
                     // return !d3.select(this).attr('data-active');
                 })
-                .attr('class', 'item opaque')
+                .attr('class', 'vzb-bar-rank-item vzb-bar-rank-item-opaque')
                 .attr('data-active', null);
 
             selected
-                .attr('class', 'item selected')
+                .attr('class', 'vzb-bar-rank-item vzb-bar-rank-item-selected')
                 .attr('data-active', true);
 
             if (scroll) {
@@ -377,12 +369,12 @@ define([
 
             // Clear all items if nothing is left selected
             if (!selectedItems.length) {
-                itemsHolder.selectAll('.item')
-                    .attr('class', 'item')
+                itemsHolder.selectAll('.vzb-bar-rank-item')
+                    .attr('class', 'vzb-bar-rank-item')
                     .attr('data-active', null);
             } else {
                 selected
-                    .attr('class', 'item opaque');
+                    .attr('class', 'vzb-bar-rank-item vzb-bar-rank-item-opaque');
 
                 this.scrollToSelected(d3.select('#' + _.last(selectedItems)), true);
             }
@@ -391,11 +383,11 @@ define([
         },
 
         scrollToSelected: function (selected, animate) {
-            var $holder = $('#bar-rank-chart-holder'),
+            var $holder = $('#vzb-bar-rank-chart-holder'),
                 holderHeight = $holder.height(),
                 selectedPosition = parseInt(selected.attr('data-position'));
 
-            $('#bar-rank-chart-holder').animate({
+            $holder.animate({
                 'scrollTop': (selectedPosition + itemHeight - holderHeight / 2)
             }, animate ? 150 : 0);
         },

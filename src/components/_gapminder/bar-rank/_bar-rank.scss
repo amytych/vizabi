@@ -1,11 +1,11 @@
-#bar-rank-wrapper {
+#vzb-bar-rank-wrapper {
     @include absolute(0, 0, 0, 0);
     @include font-size(18px);
     padding-top: 50px;
     font-family: $fontFamily;
     color: #666;
 
-    #bar-rank-chart-holder {
+    #vzb-bar-rank-chart-holder {
         position: absolute;
         left: 0;
         right: 0;
@@ -14,7 +14,7 @@
         overflow: auto;
     }
 
-    header {
+    .vzb-bar-rank-header {
         position: absolute;
         top: 0;
         left: 0;
@@ -34,7 +34,7 @@
             text-transform: capitalize;
         }
 
-        .header-name {
+        .vzb-bar-rank-header-name {
             text-align: left;
         }
     }
@@ -43,76 +43,50 @@
         @include absolute(30px, 0, 0, 0);
     }
 
-    .item-headers {
-        fill: $colorWhite;
-    }
-
-    .header-title {
-        fill: $colorGrey;
-        text-transform: capitalize;
-    }
-
     .title {
         color: $colorIMmediumBlue;
         fill: currentColor;
     }
-    .axis {
-        fill: none;
-        stroke: $colorGrey;
-        color: $colorGrey;
 
-        text {
-            fill: currentColor;
-            stroke: none;
-        }
-    }
-    .item {
+    .vzb-bar-rank-item {
         transition: opacity .1s ease-in;
 
-        &.opaque {
+        &.vzb-bar-rank-item-opaque {
             opacity: .2;
         }
 
-        .item-bg, .bar-bg {
+        .vzb-bar-rank-item-bg, .vzb-bar-rank-item-bar-bg {
             fill: $colorWhite;
         }
 
-        .bar {
+        .vzb-bar-rank-item-bar {
             fill: $colorGreen;
             stroke: none;
         }
 
-        &:nth-child(2n) .bar {
+        &:nth-child(2n) .vzb-bar-rank-item-bar {
             fill: $colorRed;
         }
-        &:nth-child(3n) .bar {
+        &:nth-child(3n) .vzb-bar-rank-item-bar {
             fill: $colorBlue;
         }
     }
 
-    .tooltip {
-        fill: red;
-
-        &.hidden {
-            display: none;
-        }
-    }
-
-    .value-label {
+    .vzb-bar-rank-item-value {
         fill: $colorGrey;
     }
 }
 
 &.medium {
-    #bar-rank-wrapper {
+    #vzb-bar-rank-wrapper {
         @include font-size(15px);
         padding-top: 40px;
 
-        #bar-rank-chart-holder {
+        #vzb-bar-rank-chart-holder {
             top: 40px;
         }
 
-        header {
+        .vzb-bar-rank-header {
             height: 40px;
             line-height: 40px;
         }
@@ -120,15 +94,15 @@
 }
 
 &.small {
-    #bar-rank-wrapper {
+    #vzb-bar-rank-wrapper {
         @include font-size(12px);
         padding-top: 30px;
 
-        #bar-rank-chart-holder {
+        #vzb-bar-rank-chart-holder {
             top: 30px;
         }
 
-        header {
+        .vzb-bar-rank-header {
             height: 30px;
             line-height: 30px;
         }
