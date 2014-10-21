@@ -80,7 +80,6 @@ function forceState(id, state) {
 }
 
 function showState(state, id) {
-    console.log('dupa');
     if (!id) {
         id = "state";
     }

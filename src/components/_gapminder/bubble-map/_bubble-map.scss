@@ -1,25 +1,42 @@
 //general styles
-#bubble-map {
-    //...
+#bubble-map-holder {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+
+    .bubble, .bubble svg {
+      position: absolute;
+    }
+
+    .bubble svg {
+      font: 10px sans-serif;
+    }
+
+    .bubble circle {
+      fill: brown;
+      stroke: black;
+      stroke-width: 1.5px;
+    }
 }
 
 //large specific styles
 &.large {
-    #bubble-map {
+    #bubble-map-holder {
      	//...
     }
 }
 
 //medium specific styles
 &.medium {
-    #bubble-map {
+    #bubble-map-holder {
         //...
     }
 }
 
 //small specific styles
 &.small {
-    #bubble-map {
+    #bubble-map-holder {
         //...
     }
 }

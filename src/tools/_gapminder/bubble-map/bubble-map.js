@@ -5,27 +5,38 @@ define([
 
     var BubbleMap = Tool.extend({
         init: function(parent, options) {
-            
-            this.name = bubble-map;
+
+            this.name = 'bubble-map';
             this.template = "tools/_gapminder/bubble-map/bubble-map";
             this.placeholder = options.placeholder;
 
             this.state = options.state;
 
 	        //add components
-            
+
             this.addComponent('_gapminder/bubble-map', {
-                placeholder: '.vizabi-your-placeholder'
+                placeholder: '.vizabi-tool-viz'
             });
-            
+
             this.addComponent('_gapminder/header', {
                 placeholder: '.vizabi-tool-title'
             });
-            
+
             this.addComponent('_gapminder/timeslider', {
                 placeholder: '.vizabi-tool-timeslider'
             });
-            
+
+            this.addComponent('_gapminder/buttonlist', {
+                placeholder: '.vizabi-tool-buttonlist',
+                buttons: [{
+                            id: "geo",
+                            title: "Country",
+                            icon: "globe",
+
+                        }],
+                data: options.data
+            });
+
 
             this._super(parent, options);
         },
@@ -39,7 +50,7 @@ define([
                         'geo',
                         'time',
                         'geo.name',
-                        'geo.category', 
+                        'geo.category',
                         this.model.getState("indicator")
                     ],
                     where: {

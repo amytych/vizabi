@@ -109,7 +109,7 @@ define([
                 promises = [],
                 components = this.components;
 
-            //use the same name for the initialized collection           
+            //use the same name for the initialized collection
             this.components = {};
 
             // Loops through components, loading them.
