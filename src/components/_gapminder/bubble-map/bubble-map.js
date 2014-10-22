@@ -6,7 +6,8 @@ define([
     'base/component'
 ], function($, d3, _, Component) {
 
-    var map, overlay, layer, projection, marker, data, displayData, padding = 10, radius = 4.5, stroke = 1.5;
+    var $mapHolder, mapHolderWidth, mapHolderHeight,
+        map, overlay, layer, projection, marker, markerEnter, data, displayData, padding = 12, radius = 5.5, stroke = 1.5;
 
     var BubbleMap = Component.extend({
 
@@ -29,9 +30,15 @@ define([
          * Ideally, it contains instantiations related to template
          */
         postRender: function() {
+            var _this = this;
+
             year = this.model.getState('time');
             data = this.model.getData()[0];
             displayData = data.filter(function(row) { return (row.time == year); });
+
+            $mapHolder = $('#bubble-map-holder');
+            mapHolderWidth = $mapHolder.width();
+            mapHolderHeight = $mapHolder.height();
 
             // Create the Google Map…
             map = new google.maps.Map(d3.select("#bubble-map-holder").node(), {
@@ -39,6 +46,52 @@ define([
               center: new google.maps.LatLng(displayData[0].lat, displayData[0].lon),
               mapTypeId: google.maps.MapTypeId.TERRAIN
             });
+
+            overlay = new google.maps.OverlayView();
+
+            // Add the container when the overlay is added to the map.
+            overlay.onAdd = function() {
+                layer = d3.select(this.getPanes().overlayMouseTarget).append("div")
+                    .attr("class", "bubble");
+
+                // Draw each marker as a separate SVG element.
+                // We could use a single SVG, but what size would it have?
+                overlay.draw = function() {
+                    projection = this.getProjection();
+
+                    marker = layer.selectAll("svg")
+                        .data(displayData, function (d) { return d.geo; })
+                        .each(function (d) {
+                            return _this.transform.call(this, d);
+                        }) // update existing markers
+                        .enter().append("svg:svg")
+                        .each(function (d) {
+                            return _this.transform.call(this, d);
+                        })
+                        .on('mouseenter', function (d) {
+                            _this.addHighlight.call(this, d);
+                            _this.displayTooltip.call(this, d);
+                        })
+                        .on('mouseleave', function (d) {
+                            _this.removeHighlight.call(this, d);
+                            _this.hideTooltip.call(this, d);
+                        })
+                        .attr("class", "marker");
+
+                // Add a circle.
+                marker.append("svg:circle")
+                    .attr("r", function (d) {
+                        // console.log(d);
+                        return radius;
+                    })
+                    .attr("cx", padding)
+                    .attr("cy", padding)
+                    .attr("id", function (d) { return d.geo; });
+                };
+            };
+
+            // Bind our overlay to the map…
+            overlay.setMap(map);
 
             this.update();
         },
@@ -56,47 +109,46 @@ define([
             data = this.model.getData()[0];
             displayData = data.filter(function(row) { return (row.time == year); });
 
-            overlay = new google.maps.OverlayView();
+            layer = d3.select('.bubble');
 
-            // Add the container when the overlay is added to the map.
-            overlay.onAdd = function() {
-                layer = d3.select(this.getPanes().overlayMouseTarget).append("div")
-                    .attr("class", "bubble");
+            marker = layer.selectAll(".marker")
+                .data(displayData, function (d) { return d.geo; });
 
-                // Draw each marker as a separate SVG element.
-                // We could use a single SVG, but what size would it have?
-                overlay.draw = function() {
-                    projection = this.getProjection();
+            markerEnter = marker
+                .enter().append("svg:svg")
+                .each(function (d) {
+                    return _this.transform.call(this, d);
+                })
+                .on('mouseenter', function (d) {
+                    _this.addHighlight.call(this, d);
+                    _this.displayTooltip.call(this, d);
+                })
+                .on('mouseleave', function (d) {
+                    _this.removeHighlight.call(this, d);
+                    _this.hideTooltip.call(this, d);
+                })
+                .attr("class", "marker");
 
-                    marker = layer.selectAll("svg")
-                        .data(displayData)
-                        .each(function (d) {
-                            return _this.transform.call(this, d);
-                        }) // update existing markers
-                        .enter().append("svg:svg")
-                        .each(function (d) {
-                            return _this.transform.call(this, d);
-                        })
-                        .on('mouseover', function (d) {
-                            _this.addHighlight.call(this, d);
-                            _this.displayTooltip.call(this, d);
-                        })
-                        .on('mouseout', function (d) {
-                            _this.removeHighlight.call(this, d);
-                            _this.hideTooltip.call(this, d);
-                        })
-                        .attr("class", "marker");
+            // Add a circle.
+            markerEnter.append("svg:circle")
+                .attr("r", radius)
+                .attr("cx", padding)
+                .attr("cy", padding)
+                .attr("id", function (d) { return d.geo; });
 
-                  // Add a circle.
-                  marker.append("svg:circle")
-                      .attr("r", radius)
-                      .attr("cx", padding)
-                      .attr("cy", padding);
-                };
-              };
+            marker.exit().remove();
 
-              // Bind our overlay to the map…
-              overlay.setMap(map);
+            marker
+                .each(function (d) {
+                    return _this.transform.call(this, d);
+                });
+
+            // Add a circle.
+            marker.select("circle")
+                .attr("r", radius)
+                .attr("cx", padding)
+                .attr("cy", padding)
+                .attr("id", function (d) { return d.geo; });
         },
 
         /*
@@ -119,19 +171,49 @@ define([
       },
 
         addHighlight: function (d) {
-            console.log(d.name, d['country.name'])
+            d3.select(this).attr('class', 'marker hover');
         },
 
         displayTooltip: function (d) {
+            var tooltip = layer.append('svg'), textWidth;
 
+            tooltip.attr('class', 'tooltip');
+            tooltip.append('rect');
+            var text = tooltip
+                .append('text')
+                .attr('x', 5)
+                .attr('y', 35)
+                .text(d.name);
+
+            textWidth = text[0][0].getBBox().width + 10;
+
+            // var el = d3.select(this),
+            //     tooltip = el.append('g').attr('class', 'tooltip'),
+            //     text = d.name + '\n' + '3',
+            //     background = tooltip.append('rect'),
+            //     textEl = tooltip.append('text')
+            //     .attr('y', 33)
+            //         .attr('x', 5)
+            //         .text(text);
+
+            tooltip
+                .style("left", 5 + "px")
+                .style("top", (mapHolderHeight - 70) + "px")
+                .attr('height', 40)
+                .attr('width', textWidth)
+
+            tooltip.select('rect')
+                .attr('y', 20)
+                .attr('width', textWidth)
+                .attr('height', 20);
         },
 
         removeHighlight: function (d) {
-            console.clear()
+            d3.select(this).attr('class', 'marker');
         },
 
         hideTooltip: function (d) {
-
+            d3.select('.tooltip').remove()
         }
     });
 

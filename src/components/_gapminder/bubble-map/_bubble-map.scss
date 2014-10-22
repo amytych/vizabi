@@ -11,12 +11,30 @@
 
     .bubble svg {
       font: 10px sans-serif;
+
     }
 
     .bubble circle {
-      fill: brown;
+      fill: #f84e67;
       stroke: black;
       stroke-width: 1.5px;
+    }
+
+    .hover circle {
+        fill: #b70721;
+    }
+
+    .tooltip {
+        position: absolute;
+        z-index: 99999;
+
+        rect {
+            fill: white;
+        }
+
+        text {
+            fill: black;
+        }
     }
 }
 
