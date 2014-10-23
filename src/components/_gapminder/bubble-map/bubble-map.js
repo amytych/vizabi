@@ -81,7 +81,6 @@ define([
                 // Add a circle.
                 marker.append("svg:circle")
                     .attr("r", function (d) {
-                        // console.log(d);
                         return radius;
                     })
                     .attr("cx", padding)
@@ -187,15 +186,6 @@ define([
 
             textWidth = text[0][0].getBBox().width + 10;
 
-            // var el = d3.select(this),
-            //     tooltip = el.append('g').attr('class', 'tooltip'),
-            //     text = d.name + '\n' + '3',
-            //     background = tooltip.append('rect'),
-            //     textEl = tooltip.append('text')
-            //     .attr('y', 33)
-            //         .attr('x', 5)
-            //         .text(text);
-
             tooltip
                 .style("left", 5 + "px")
                 .style("top", (mapHolderHeight - 70) + "px")
@@ -213,7 +203,7 @@ define([
         },
 
         hideTooltip: function (d) {
-            d3.select('.tooltip').remove()
+            d3.select('.tooltip').remove();
         }
     });
 
