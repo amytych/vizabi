@@ -1,5 +1,5 @@
 //TODO: refactor this whole thing
-//TODO: timeslider is composed of jquery button and jquery slider and packed into one, since they can extend 
+//TODO: timeslider is composed of jquery button and jquery slider and packed into one, since they can extend
 
 //TODO: differentiate between chart componenst and others by viz- word
 

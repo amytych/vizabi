@@ -6,8 +6,21 @@ define([
     'base/component'
 ], function($, d3, _, Component) {
 
-    var $mapHolder, mapHolderWidth, mapHolderHeight,
-        map, overlay, layer, projection, marker, markerEnter, data, displayData, padding = 12, radius = 5.5, stroke = 1.5;
+    var $mapHolder, $infoDisplayCounter, mapHolderWidth, mapHolderHeight,
+        map, overlay, layer, projection, marker, markerEnter,
+        data, displayData, indicator, time, min, max, radiusScale,
+        markerWidth = 15, markerHeight = 15, markerStrokeWidth = 1.5,
+        padding = markerWidth / 2, radius = markerWidth / 2 - markerStrokeWidth;
+
+    // Once the data is in correct and finalised format
+    // this wont be needed
+    function getValue (d) {
+        return d['cases'] || d['suspected_cases'] || d['reported_cases'] || 0;
+    }
+
+    function getScale (d) {
+        return radiusScale(getValue(d));
+    }
 
     var BubbleMap = Component.extend({
 
@@ -30,21 +43,35 @@ define([
          * Ideally, it contains instantiations related to template
          */
         postRender: function() {
-            var _this = this;
+            var _this = this,
+                mapCenter;
 
-            year = this.model.getState('time');
+            time = this.model.getState('time');
+            indicator = this.model.getState('indicator');
             data = this.model.getData()[0];
-            displayData = data.filter(function(row) { return (row.time == year); });
+            displayData = data.filter(function(row) { return (row.time == time); });
+            min = d3.min(displayData, function(d) { return getValue(d); });
+            max = d3.max(displayData, function(d) { return getValue(d); });
+            radiusScale = d3.scale.linear()
+                .domain([min, max])
+                .range([5, 10]);
+
 
             $mapHolder = $('#bubble-map-holder');
+            $infoDisplayCounter = $('#bubble-map-info-display-counter');
+
             mapHolderWidth = $mapHolder.width();
             mapHolderHeight = $mapHolder.height();
 
+            mapCenter = this.getMapCenter(displayData);
+
             // Create the Google Map…
             map = new google.maps.Map(d3.select("#bubble-map-holder").node(), {
-              zoom: 5,
-              center: new google.maps.LatLng(displayData[0].lat, displayData[0].lon),
-              mapTypeId: google.maps.MapTypeId.TERRAIN
+              zoom: 6,
+              center: new google.maps.LatLng(mapCenter.lat(), mapCenter.lng()),
+              mapTypeId: google.maps.MapTypeId.TERRAIN,
+              mapTypeControl: false,
+              streetViewControl: false
             });
 
             overlay = new google.maps.OverlayView();
@@ -69,23 +96,25 @@ define([
                             return _this.transform.call(this, d);
                         })
                         .on('mouseenter', function (d) {
+                            _this.displayData.call(this, d);
                             _this.addHighlight.call(this, d);
-                            _this.displayTooltip.call(this, d);
+                            _this.addTooltip.call(this, d);
                         })
                         .on('mouseleave', function (d) {
+                            _this.hideData.call(this, d);
                             _this.removeHighlight.call(this, d);
-                            _this.hideTooltip.call(this, d);
+                            _this.removeTooltip.call(this, d);
                         })
                         .attr("class", "marker");
 
-                // Add a circle.
-                marker.append("svg:circle")
-                    .attr("r", function (d) {
-                        return radius;
-                    })
-                    .attr("cx", padding)
-                    .attr("cy", padding)
-                    .attr("id", function (d) { return d.geo; });
+                    // Add a circle.
+                    marker.append("svg:circle")
+                        .attr("cx", function (d) { return getScale(d) + markerStrokeWidth; })
+                        .attr("cy", function (d) { return getScale(d) + markerStrokeWidth; })
+                        .attr("id", function (d) { return d.geo; })
+                        .transition()
+                        .duration(150)
+                        .attr("r", function (d) { return getScale(d); });
                 };
             };
 
@@ -104,9 +133,16 @@ define([
         update: function() {
             var _this = this;
 
-            year = this.model.getState('time');
+            time = this.model.getState('time');
+            indicator = this.model.getState('indicator');
             data = this.model.getData()[0];
-            displayData = data.filter(function(row) { return (row.time == year); });
+            displayData = data.filter(function(row) { return (row.time == time); });
+            min = d3.min(displayData, function(d) { return getValue(d); });
+            max = d3.max(displayData, function(d) { return getValue(d); });
+            radiusScale = d3.scale.linear()
+                .domain([min, max])
+                .range([5, 10]);
+
 
             layer = d3.select('.bubble');
 
@@ -119,21 +155,25 @@ define([
                     return _this.transform.call(this, d);
                 })
                 .on('mouseenter', function (d) {
+                    _this.displayData.call(this, d);
                     _this.addHighlight.call(this, d);
-                    _this.displayTooltip.call(this, d);
+                    _this.addTooltip.call(this, d);
                 })
                 .on('mouseleave', function (d) {
+                    _this.hideData.call(this, d);
                     _this.removeHighlight.call(this, d);
-                    _this.hideTooltip.call(this, d);
+                    _this.removeTooltip.call(this, d);
                 })
                 .attr("class", "marker");
 
             // Add a circle.
             markerEnter.append("svg:circle")
-                .attr("r", radius)
-                .attr("cx", padding)
-                .attr("cy", padding)
-                .attr("id", function (d) { return d.geo; });
+                .attr("cx", function (d) { return getScale(d) + markerStrokeWidth; })
+                .attr("cy", function (d) { return getScale(d) + markerStrokeWidth; })
+                .attr("id", function (d) { return d.geo; })
+                .transition()
+                .duration(150)
+                .attr("r", function (d) { return getScale(d); });
 
             marker.exit().remove();
 
@@ -142,12 +182,13 @@ define([
                     return _this.transform.call(this, d);
                 });
 
-            // Add a circle.
             marker.select("circle")
-                .attr("r", radius)
-                .attr("cx", padding)
-                .attr("cy", padding)
-                .attr("id", function (d) { return d.geo; });
+                .attr("cx", function (d) { return getScale(d) + markerStrokeWidth; })
+                .attr("cy", function (d) { return getScale(d) + markerStrokeWidth; })
+                .attr("id", function (d) { return d.geo; })
+                .transition()
+                .duration(150)
+                .attr("r", function (d) { return getScale(d); });
         },
 
         /*
@@ -160,50 +201,87 @@ define([
         },
 
         transform: function (d) {
-          d = new google.maps.LatLng(d.lat, d.lon);
-          d = projection.fromLatLngToDivPixel(d);
-          return d3.select(this)
-              .attr("width", 20)
-              .attr("height", 20)
-              .style("left", (d.x - padding) + "px")
-              .style("top", (d.y - padding) + "px");
-      },
+            var pos = new google.maps.LatLng(d.lat, d.lon),
+                pos = projection.fromLatLngToDivPixel(pos);
+
+            return d3.select(this)
+                .attr("width", function (d) { return (getScale(d) + markerStrokeWidth) * 2; })
+                .attr("height", function (d) { return (getScale(d) + markerStrokeWidth) * 2; })
+                .style("left", function (d) { return (pos.x - getScale(d) + markerStrokeWidth * 2) + "px"; })
+                .style("top", function (d) { return (pos.y - getScale(d) + markerStrokeWidth * 2) + "px"; });
+        },
 
         addHighlight: function (d) {
             d3.select(this).attr('class', 'marker hover');
         },
 
-        displayTooltip: function (d) {
-            var tooltip = layer.append('svg'), textWidth;
+        addTooltip: function (d) {
+            var element = d3.select(this),
+                circleEl = element.select('circle'),
+                tooltipEl, backgroundEl, textEl,
+                leftOffset, topOffset,
+                tooltipWidth, tooltipHeight;
 
-            tooltip.attr('class', 'tooltip');
-            tooltip.append('rect');
-            var text = tooltip
-                .append('text')
-                .attr('x', 5)
-                .attr('y', 35)
+            // Create and append tooltip holder
+            tooltipEl = layer.append('svg')
+                .attr('class', 'tooltip');
+
+            // Create and append tooltip background
+            backgroundEl = tooltipEl.append('rect');
+
+            // Create and append tooltip text
+            textEl = tooltipEl.append('text')
                 .text(d.name);
 
-            textWidth = text[0][0].getBBox().width + 10;
+            // Now that all elements are in place,
+            // determine width and height of the tooltip
+            tooltipWidth = textEl[0][0].getBBox().width + 15;
+            tooltipHeight = textEl[0][0].getBBox().height + 15;
 
-            tooltip
-                .style("left", 5 + "px")
-                .style("top", (mapHolderHeight - 70) + "px")
-                .attr('height', 40)
-                .attr('width', textWidth)
+            // Having width and height, calculate tooltip offset
+            leftOffset = parseFloat(element.style('left')) - tooltipWidth / 2 + parseInt(element.attr('width'), 10) / 2;
+            topOffset = parseFloat(element.style('top')) - tooltipHeight;
 
-            tooltip.select('rect')
-                .attr('y', 20)
-                .attr('width', textWidth)
-                .attr('height', 20);
+            // Set size and positioning for background and text
+            tooltipEl
+                .attr('width', tooltipWidth)
+                .attr('height', tooltipHeight)
+                .style('left', leftOffset + 'px')
+                .style('top', topOffset + 'px');
+
+            backgroundEl
+                .attr('x', markerStrokeWidth / 2)
+                .attr('y', markerStrokeWidth / 2)
+                .attr('width', tooltipWidth - markerStrokeWidth * 2)
+                .attr('height', tooltipHeight - markerStrokeWidth * 2);
+
+            textEl
+                .attr('x', 5 + markerStrokeWidth)
+                .attr('y', tooltipHeight - 10 - markerStrokeWidth);
         },
 
         removeHighlight: function (d) {
             d3.select(this).attr('class', 'marker');
         },
 
-        hideTooltip: function (d) {
-            d3.select('.tooltip').remove();
+        removeTooltip: function (d) {
+            layer.select('.tooltip').remove();
+        },
+
+        // Just a mockup
+        // Will do it properly when the data format will be confirmed
+        displayData: function (d) {
+            $infoDisplayCounter.text(d.cases || d.suspected_cases || 'No data');
+        },
+
+        hideData: function (d) {
+            $infoDisplayCounter.text('');
+        },
+
+        getMapCenter: function (locations) {
+            var bound = new google.maps.LatLngBounds();
+            _.each(locations, function (location) { bound.extend( new google.maps.LatLng(location.lat, location.lon) ); })
+            return bound.getCenter();
         }
     });
 
