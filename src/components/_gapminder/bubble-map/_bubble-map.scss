@@ -1,3 +1,7 @@
+$clrMarker: #f84e67;
+$clrMarkerStroke: darken($clrMarker, 50%);
+$clrMarkerHover: darken($clrMarker, 20%);
+
 //general styles
 #bubble-map-info-display {
     position: absolute;
@@ -27,8 +31,8 @@
     }
 
     .bubble circle {
-      fill: #f84e67;
-      stroke: black;
+      fill: $clrMarker;
+      stroke: $clrMarkerStroke;
       stroke-width: 1.5px;
     }
 
@@ -37,8 +41,16 @@
         z-index: 1000;
 
         circle {
-            fill: #b70721;
-            stroke: white;
+            fill: $clrMarkerHover;
+            stroke: $clrMarkerHover;
+        }
+
+        .inner {
+            stroke-width: 0;
+        }
+
+        .inner1 {
+            fill: white;
         }
     }
 

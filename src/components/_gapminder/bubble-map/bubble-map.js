@@ -221,12 +221,32 @@ define([
         },
 
         addHighlight: function (d) {
-            d3.select(this).attr('class', 'marker hover');
+            var element = d3.select(this),
+                circleEl = element.select('circle'),
+                radius = circleEl.attr('r'),
+                center = circleEl.attr('cx'),
+                newRadius = radius - markerStrokeWidth;
+
+            element.append('circle')
+                .attr('r', newRadius > 0 ? newRadius : 0)
+                .attr('cx', center)
+                .attr('cy', center)
+                .attr('class', 'inner inner1');
+
+            newRadius -= 2;
+
+            element.append('circle')
+                .attr('r', newRadius > 0 ? newRadius : 0)
+                .attr('cx', center)
+                .attr('cy', center)
+                .attr('class', 'inner');
+
+            element.attr('class', 'marker hover');
+
         },
 
         addTooltip: function (d) {
             var element = d3.select(this),
-                circleEl = element.select('circle'),
                 tooltipEl, backgroundEl, textEl,
                 leftOffset, topOffset,
                 tooltipWidth, tooltipHeight;
@@ -270,7 +290,12 @@ define([
         },
 
         removeHighlight: function (d) {
-            d3.select(this).attr('class', 'marker');
+            var element = d3.select(this);
+
+            element
+                .attr('class', 'marker')
+                .selectAll('.inner')
+                .remove();
         },
 
         removeTooltip: function (d) {
