@@ -9,7 +9,7 @@ define([
     var $mapHolder, $infoDisplayCounter,
         map, overlay, layer, projection, marker, markerEnter,
         data, displayData, indicator, time, min, max, radiusScale, colorScale,
-        radiusScaleRange = [3, 15], colorScaleRange = ['#f72d4b', '#650412'], markerStrokeWidth = 1.5;
+        radiusScaleRange = [3, 15], colorScaleRange = ['#f96f83', '#c70824'], markerStrokeWidth = 1.5;
 
     // Once the data is in correct and finalised format
     // this wont be needed
