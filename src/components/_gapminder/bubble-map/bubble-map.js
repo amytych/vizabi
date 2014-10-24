@@ -9,8 +9,7 @@ define([
     var $mapHolder, $infoDisplayCounter, mapHolderWidth, mapHolderHeight,
         map, overlay, layer, projection, marker, markerEnter,
         data, displayData, indicator, time, min, max, radiusScale,
-        markerWidth = 15, markerHeight = 15, markerStrokeWidth = 1.5,
-        padding = markerWidth / 2, radius = markerWidth / 2 - markerStrokeWidth;
+        scaleRange = [3, 15], markerStrokeWidth = 1.5;
 
     // Once the data is in correct and finalised format
     // this wont be needed
@@ -54,8 +53,7 @@ define([
             max = d3.max(data, function(d) { return _getValue(d); });
             radiusScale = d3.scale.linear()
                 .domain([min, max])
-                .range([5, 10]);
-
+                .range(scaleRange);
 
             $mapHolder = $('#bubble-map-holder');
             $infoDisplayCounter = $('#bubble-map-info-display-counter');
@@ -67,11 +65,11 @@ define([
 
             // Create the Google Map…
             map = new google.maps.Map(d3.select('#bubble-map-holder').node(), {
-              zoom: 6,
-              center: new google.maps.LatLng(mapCenter.lat(), mapCenter.lng()),
-              mapTypeId: google.maps.MapTypeId.TERRAIN,
-              mapTypeControl: false,
-              streetViewControl: false
+                zoom: 6,
+                center: mapCenter,
+                mapTypeId: google.maps.MapTypeId.TERRAIN,
+                mapTypeControl: false,
+                streetViewControl: false
             });
 
             overlay = new google.maps.OverlayView();
@@ -88,13 +86,9 @@ define([
 
                     marker = layer.selectAll('svg')
                         .data(displayData, function (d) { return d.geo; })
-                        .each(function (d) {
-                            return _this.transform.call(this, d);
-                        }) // update existing markers
+                        .each(function (d) { return _this.transform.call(this, d); }) // update existing markers
                         .enter().append('svg:svg')
-                        .each(function (d) {
-                            return _this.transform.call(this, d);
-                        })
+                        .each(function (d) { return _this.transform.call(this, d); })
                         .on('mouseenter', function (d) {
                             _this.displayData.call(this, d);
                             _this.addHighlight.call(this, d);
@@ -141,7 +135,7 @@ define([
             max = d3.max(data, function(d) { return _getValue(d); });
             radiusScale = d3.scale.linear()
                 .domain([min, max])
-                .range([5, 10]);
+                .range(scaleRange);
 
 
             layer = d3.select('.bubble');
@@ -151,9 +145,7 @@ define([
 
             markerEnter = marker
                 .enter().append('svg:svg')
-                .each(function (d) {
-                    return _this.transform.call(this, d);
-                })
+                .each(function (d) { return _this.transform.call(this, d); })
                 .on('mouseenter', function (d) {
                     _this.displayData.call(this, d);
                     _this.addHighlight.call(this, d);
@@ -177,10 +169,7 @@ define([
 
             marker.exit().remove();
 
-            marker
-                .each(function (d) {
-                    return _this.transform.call(this, d);
-                });
+            marker.each(function (d) { return _this.transform.call(this, d); });
 
             marker.select('circle')
                 .attr('cx', function (d) { return _getScale(d) + markerStrokeWidth; })
@@ -189,6 +178,7 @@ define([
                 .transition()
                 .duration(150)
                 .attr('r', function (d) { return _getScale(d); });
+
         },
 
         /*
@@ -197,12 +187,31 @@ define([
          * Ideally, it contains only operations related to size
          */
         resize: function() {
-            //code here
+            var layout = this.getLayoutProfile(),
+                zoom;
+
+            switch(layout) {
+                case 'small':
+                    zoom = 6;
+                    break;
+
+                case 'medium':
+                    zoom = 7;
+                    break;
+
+                case 'large':
+                default:
+                    zoom = 7;
+            }
+            // Center the map and set the zoom;
+            map.setZoom(zoom);
+            // map.setCenter(this.getMapCenter(displayData));
         },
 
         transform: function (d) {
-            var pos = new google.maps.LatLng(d.lat, d.lon),
-                pos = projection.fromLatLngToDivPixel(pos);
+            var pos = new google.maps.LatLng(d.lat, d.lon);
+
+            pos = projection.fromLatLngToDivPixel(pos);
 
             return d3.select(this)
                 .attr('width', function (d) { return (_getScale(d) + markerStrokeWidth) * 2; })
@@ -278,10 +287,15 @@ define([
             $infoDisplayCounter.text('');
         },
 
+        getMapBounds: function (locations) {
+            var bounds = new google.maps.LatLngBounds();
+            _.each(locations, function (location) { bounds.extend( new google.maps.LatLng(location.lat, location.lon) ); });
+            return bounds;
+        },
+
         getMapCenter: function (locations) {
-            var bound = new google.maps.LatLngBounds();
-            _.each(locations, function (location) { bound.extend( new google.maps.LatLng(location.lat, location.lon) ); })
-            return bound.getCenter();
+            var bounds = this.getMapBounds(locations);
+            return bounds.getCenter();
         }
     });
 
