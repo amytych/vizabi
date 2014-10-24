@@ -14,12 +14,12 @@ define([
 
     // Once the data is in correct and finalised format
     // this wont be needed
-    function getValue (d) {
-        return d['cases'] || d['suspected_cases'] || d['reported_cases'] || 0;
+    function _getValue (d) {
+        return d[indicator];
     }
 
-    function getScale (d) {
-        return radiusScale(getValue(d));
+    function _getScale (d) {
+        return radiusScale(_getValue(d));
     }
 
     var BubbleMap = Component.extend({
@@ -31,7 +31,7 @@ define([
          */
         init: function(context, options) {
             this.name = 'bubble-map';
-            this.template = "components/_gapminder/bubble-map/bubble-map";
+            this.template = 'components/_gapminder/bubble-map/bubble-map';
             this.tool = context;
 
             this._super(context, options);
@@ -50,8 +50,8 @@ define([
             indicator = this.model.getState('indicator');
             data = this.model.getData()[0];
             displayData = data.filter(function(row) { return (row.time == time); });
-            min = d3.min(displayData, function(d) { return getValue(d); });
-            max = d3.max(displayData, function(d) { return getValue(d); });
+            min = d3.min(data, function(d) { return _getValue(d); });
+            max = d3.max(data, function(d) { return _getValue(d); });
             radiusScale = d3.scale.linear()
                 .domain([min, max])
                 .range([5, 10]);
@@ -66,7 +66,7 @@ define([
             mapCenter = this.getMapCenter(displayData);
 
             // Create the Google Map…
-            map = new google.maps.Map(d3.select("#bubble-map-holder").node(), {
+            map = new google.maps.Map(d3.select('#bubble-map-holder').node(), {
               zoom: 6,
               center: new google.maps.LatLng(mapCenter.lat(), mapCenter.lng()),
               mapTypeId: google.maps.MapTypeId.TERRAIN,
@@ -78,20 +78,20 @@ define([
 
             // Add the container when the overlay is added to the map.
             overlay.onAdd = function() {
-                layer = d3.select(this.getPanes().overlayMouseTarget).append("div")
-                    .attr("class", "bubble");
+                layer = d3.select(this.getPanes().overlayMouseTarget).append('div')
+                    .attr('class', 'bubble');
 
                 // Draw each marker as a separate SVG element.
                 // We could use a single SVG, but what size would it have?
                 overlay.draw = function() {
                     projection = this.getProjection();
 
-                    marker = layer.selectAll("svg")
+                    marker = layer.selectAll('svg')
                         .data(displayData, function (d) { return d.geo; })
                         .each(function (d) {
                             return _this.transform.call(this, d);
                         }) // update existing markers
-                        .enter().append("svg:svg")
+                        .enter().append('svg:svg')
                         .each(function (d) {
                             return _this.transform.call(this, d);
                         })
@@ -105,16 +105,16 @@ define([
                             _this.removeHighlight.call(this, d);
                             _this.removeTooltip.call(this, d);
                         })
-                        .attr("class", "marker");
+                        .attr('class', 'marker');
 
                     // Add a circle.
-                    marker.append("svg:circle")
-                        .attr("cx", function (d) { return getScale(d) + markerStrokeWidth; })
-                        .attr("cy", function (d) { return getScale(d) + markerStrokeWidth; })
-                        .attr("id", function (d) { return d.geo; })
+                    marker.append('svg:circle')
+                        .attr('cx', function (d) { return _getScale(d) + markerStrokeWidth; })
+                        .attr('cy', function (d) { return _getScale(d) + markerStrokeWidth; })
+                        .attr('id', function (d) { return d.geo; })
                         .transition()
                         .duration(150)
-                        .attr("r", function (d) { return getScale(d); });
+                        .attr('r', function (d) { return _getScale(d); });
                 };
             };
 
@@ -137,8 +137,8 @@ define([
             indicator = this.model.getState('indicator');
             data = this.model.getData()[0];
             displayData = data.filter(function(row) { return (row.time == time); });
-            min = d3.min(displayData, function(d) { return getValue(d); });
-            max = d3.max(displayData, function(d) { return getValue(d); });
+            min = d3.min(data, function(d) { return _getValue(d); });
+            max = d3.max(data, function(d) { return _getValue(d); });
             radiusScale = d3.scale.linear()
                 .domain([min, max])
                 .range([5, 10]);
@@ -146,11 +146,11 @@ define([
 
             layer = d3.select('.bubble');
 
-            marker = layer.selectAll(".marker")
+            marker = layer.selectAll('.marker')
                 .data(displayData, function (d) { return d.geo; });
 
             markerEnter = marker
-                .enter().append("svg:svg")
+                .enter().append('svg:svg')
                 .each(function (d) {
                     return _this.transform.call(this, d);
                 })
@@ -164,16 +164,16 @@ define([
                     _this.removeHighlight.call(this, d);
                     _this.removeTooltip.call(this, d);
                 })
-                .attr("class", "marker");
+                .attr('class', 'marker');
 
             // Add a circle.
-            markerEnter.append("svg:circle")
-                .attr("cx", function (d) { return getScale(d) + markerStrokeWidth; })
-                .attr("cy", function (d) { return getScale(d) + markerStrokeWidth; })
-                .attr("id", function (d) { return d.geo; })
+            markerEnter.append('svg:circle')
+                .attr('cx', function (d) { return _getScale(d) + markerStrokeWidth; })
+                .attr('cy', function (d) { return _getScale(d) + markerStrokeWidth; })
+                .attr('id', function (d) { return d.geo; })
                 .transition()
                 .duration(150)
-                .attr("r", function (d) { return getScale(d); });
+                .attr('r', function (d) { return _getScale(d); });
 
             marker.exit().remove();
 
@@ -182,13 +182,13 @@ define([
                     return _this.transform.call(this, d);
                 });
 
-            marker.select("circle")
-                .attr("cx", function (d) { return getScale(d) + markerStrokeWidth; })
-                .attr("cy", function (d) { return getScale(d) + markerStrokeWidth; })
-                .attr("id", function (d) { return d.geo; })
+            marker.select('circle')
+                .attr('cx', function (d) { return _getScale(d) + markerStrokeWidth; })
+                .attr('cy', function (d) { return _getScale(d) + markerStrokeWidth; })
+                .attr('id', function (d) { return d.geo; })
                 .transition()
                 .duration(150)
-                .attr("r", function (d) { return getScale(d); });
+                .attr('r', function (d) { return _getScale(d); });
         },
 
         /*
@@ -205,10 +205,10 @@ define([
                 pos = projection.fromLatLngToDivPixel(pos);
 
             return d3.select(this)
-                .attr("width", function (d) { return (getScale(d) + markerStrokeWidth) * 2; })
-                .attr("height", function (d) { return (getScale(d) + markerStrokeWidth) * 2; })
-                .style("left", function (d) { return (pos.x - getScale(d) + markerStrokeWidth * 2) + "px"; })
-                .style("top", function (d) { return (pos.y - getScale(d) + markerStrokeWidth * 2) + "px"; });
+                .attr('width', function (d) { return (_getScale(d) + markerStrokeWidth) * 2; })
+                .attr('height', function (d) { return (_getScale(d) + markerStrokeWidth) * 2; })
+                .style('left', function (d) { return (pos.x - _getScale(d) + markerStrokeWidth * 2) + 'px'; })
+                .style('top', function (d) { return (pos.y - _getScale(d) + markerStrokeWidth * 2) + 'px'; });
         },
 
         addHighlight: function (d) {
