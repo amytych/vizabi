@@ -6,10 +6,10 @@ define([
     'base/component'
 ], function($, d3, _, Component) {
 
-    var $mapHolder, $infoDisplayCounter, mapHolderWidth, mapHolderHeight,
+    var $mapHolder, $infoDisplayCounter,
         map, overlay, layer, projection, marker, markerEnter,
-        data, displayData, indicator, time, min, max, radiusScale,
-        scaleRange = [3, 15], markerStrokeWidth = 1.5;
+        data, displayData, indicator, time, min, max, radiusScale, colorScale,
+        radiusScaleRange = [3, 15], colorScaleRange = ['#f72d4b', '#650412'], markerStrokeWidth = 1.5;
 
     // Once the data is in correct and finalised format
     // this wont be needed
@@ -17,8 +17,12 @@ define([
         return d[indicator];
     }
 
-    function _getScale (d) {
+    function _getRadiusScale (d) {
         return radiusScale(_getValue(d));
+    }
+
+    function _getColorScale (d) {
+        return colorScale(_getValue(d));
     }
 
     var BubbleMap = Component.extend({
@@ -53,13 +57,13 @@ define([
             max = d3.max(data, function(d) { return _getValue(d); });
             radiusScale = d3.scale.linear()
                 .domain([min, max])
-                .range(scaleRange);
+                .range(radiusScaleRange);
+            colorScale = d3.scale.linear()
+                .domain([min, max])
+                .range(colorScaleRange);
 
             $mapHolder = $('#bubble-map-holder');
             $infoDisplayCounter = $('#bubble-map-info-display-counter');
-
-            mapHolderWidth = $mapHolder.width();
-            mapHolderHeight = $mapHolder.height();
 
             mapCenter = this.getMapCenter(displayData);
 
@@ -103,12 +107,13 @@ define([
 
                     // Add a circle.
                     marker.append('svg:circle')
-                        .attr('cx', function (d) { return _getScale(d) + markerStrokeWidth; })
-                        .attr('cy', function (d) { return _getScale(d) + markerStrokeWidth; })
+                        .attr('cx', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
+                        .attr('cy', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
                         .attr('id', function (d) { return d.geo; })
+                        .attr('fill', function (d) {return _getColorScale(d); })
                         .transition()
                         .duration(150)
-                        .attr('r', function (d) { return _getScale(d); });
+                        .attr('r', function (d) { return _getRadiusScale(d); });
                 };
             };
 
@@ -135,8 +140,10 @@ define([
             max = d3.max(data, function(d) { return _getValue(d); });
             radiusScale = d3.scale.linear()
                 .domain([min, max])
-                .range(scaleRange);
-
+                .range(radiusScaleRange);
+            colorScale = d3.scale.linear()
+                .domain([min, max])
+                .range(colorScaleRange);
 
             layer = d3.select('.bubble');
 
@@ -160,24 +167,26 @@ define([
 
             // Add a circle.
             markerEnter.append('svg:circle')
-                .attr('cx', function (d) { return _getScale(d) + markerStrokeWidth; })
-                .attr('cy', function (d) { return _getScale(d) + markerStrokeWidth; })
+                .attr('cx', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
+                .attr('cy', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
                 .attr('id', function (d) { return d.geo; })
+                .attr('fill', function (d) {return _getColorScale(d); })
                 .transition()
                 .duration(150)
-                .attr('r', function (d) { return _getScale(d); });
+                .attr('r', function (d) { return _getRadiusScale(d); });
 
             marker.exit().remove();
 
             marker.each(function (d) { return _this.transform.call(this, d); });
 
             marker.select('circle')
-                .attr('cx', function (d) { return _getScale(d) + markerStrokeWidth; })
-                .attr('cy', function (d) { return _getScale(d) + markerStrokeWidth; })
+                .attr('cx', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
+                .attr('cy', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
                 .attr('id', function (d) { return d.geo; })
+                .attr('fill', function (d) {return _getColorScale(d); })
                 .transition()
                 .duration(150)
-                .attr('r', function (d) { return _getScale(d); });
+                .attr('r', function (d) { return _getRadiusScale(d); });
 
         },
 
@@ -214,10 +223,10 @@ define([
             pos = projection.fromLatLngToDivPixel(pos);
 
             return d3.select(this)
-                .attr('width', function (d) { return (_getScale(d) + markerStrokeWidth) * 2; })
-                .attr('height', function (d) { return (_getScale(d) + markerStrokeWidth) * 2; })
-                .style('left', function (d) { return (pos.x - _getScale(d) + markerStrokeWidth * 2) + 'px'; })
-                .style('top', function (d) { return (pos.y - _getScale(d) + markerStrokeWidth * 2) + 'px'; });
+                .attr('width', function (d) { return (_getRadiusScale(d) + markerStrokeWidth) * 2; })
+                .attr('height', function (d) { return (_getRadiusScale(d) + markerStrokeWidth) * 2; })
+                .style('left', function (d) { return (pos.x - _getRadiusScale(d) + markerStrokeWidth * 2) + 'px'; })
+                .style('top', function (d) { return (pos.y - _getRadiusScale(d) + markerStrokeWidth * 2) + 'px'; });
         },
 
         addHighlight: function (d) {
@@ -305,7 +314,7 @@ define([
         // Just a mockup
         // Will do it properly when the data format will be confirmed
         displayData: function (d) {
-            $infoDisplayCounter.text(d.cases || d.suspected_cases || 'No data');
+            $infoDisplayCounter.text(_getValue(d));
         },
 
         hideData: function (d) {

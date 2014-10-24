@@ -31,7 +31,7 @@ $clrMarkerHover: darken($clrMarker, 20%);
     }
 
     .bubble circle {
-      fill: $clrMarker;
+      // fill: $clrMarker;
       stroke: $clrMarkerStroke;
       stroke-width: 1.5px;
     }
