@@ -9,7 +9,7 @@ define([
     var $mapHolder, $infoDisplayCounter,
         map, overlay, layer, projection, marker, markerEnter,
         data, displayData, indicator, time, min, max, radiusScale, colorScale,
-        radiusScaleRange = [3, 15], colorScaleRange = ['#f96f83', '#c70824'], markerStrokeWidth = 1.5;
+        radiusScaleRange = [3, 15], colorScaleRange = ['#7fb5f5', '#d70927'], markerStrokeWidth = 1.5;
 
     // Once the data is in correct and finalised format
     // this wont be needed
@@ -78,47 +78,70 @@ define([
 
             overlay = new google.maps.OverlayView();
 
+            // Load a GeoJSON from the same server as our demo.
+            map.data.loadGeoJson('http://localhost:9000/dist/data-waffles/bubble-map/en/geo_json_features.json');
+
+            map.data.addListener('mouseover', function(event) {
+                var d = _.find(displayData, function (elem) { return event.feature.getProperty('name') == elem.name; });
+
+                if (d) {
+                    _this.displayData.call(this, d);
+                }
+
+                map.data.overrideStyle(event.feature, {fillOpacity: 1});
+             });
+
+            map.data.addListener('mouseout', function(event) {
+                var d = _.find(displayData, function (elem) { return event.feature.getProperty('name') == elem.name; });
+
+                if (d) {
+                    _this.hideData.call(this, d);
+                }
+
+                map.data.revertStyle();
+             });
+
             // Add the container when the overlay is added to the map.
-            overlay.onAdd = function() {
-                layer = d3.select(this.getPanes().overlayMouseTarget).append('div')
-                    .attr('class', 'bubble');
+            // overlay.onAdd = function() {
+            //     layer = d3.select(this.getPanes().overlayMouseTarget).append('div')
+            //         .attr('class', 'bubble');
 
-                // Draw each marker as a separate SVG element.
-                // We could use a single SVG, but what size would it have?
-                overlay.draw = function() {
-                    projection = this.getProjection();
+            //     // Draw each marker as a separate SVG element.
+            //     // We could use a single SVG, but what size would it have?
+            //     overlay.draw = function() {
+            //         projection = this.getProjection();
 
-                    marker = layer.selectAll('svg')
-                        .data(displayData, function (d) { return d.geo; })
-                        .each(function (d) { return _this.transform.call(this, d); }) // update existing markers
-                        .enter().append('svg:svg')
-                        .each(function (d) { return _this.transform.call(this, d); })
-                        .on('mouseenter', function (d) {
-                            _this.displayData.call(this, d);
-                            _this.addHighlight.call(this, d);
-                            _this.addTooltip.call(this, d);
-                        })
-                        .on('mouseleave', function (d) {
-                            _this.hideData.call(this, d);
-                            _this.removeHighlight.call(this, d);
-                            _this.removeTooltip.call(this, d);
-                        })
-                        .attr('class', 'marker');
+            //         marker = layer.selectAll('svg')
+            //             .data(displayData, function (d) { return d.geo; })
+            //             .each(function (d) { return _this.transform.call(this, d); }) // update existing markers
+            //             .enter().append('svg:svg')
+            //             .each(function (d) { return _this.transform.call(this, d); })
+            //             .on('mouseenter', function (d) {
+            //                 _this.displayData.call(this, d);
+            //                 _this.addHighlight.call(this, d);
+            //                 _this.addTooltip.call(this, d);
+            //             })
+            //             .on('mouseleave', function (d) {
+            //                 _this.hideData.call(this, d);
+            //                 _this.removeHighlight.call(this, d);
+            //                 _this.removeTooltip.call(this, d);
+            //             })
+            //             .attr('class', 'marker');
 
-                    // Add a circle.
-                    marker.append('svg:circle')
-                        .attr('cx', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
-                        .attr('cy', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
-                        .attr('id', function (d) { return d.geo; })
-                        .attr('fill', function (d) {return _getColorScale(d); })
-                        .transition()
-                        .duration(150)
-                        .attr('r', function (d) { return _getRadiusScale(d); });
-                };
-            };
+            //         // Add a circle.
+            //         marker.append('svg:circle')
+            //             .attr('cx', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
+            //             .attr('cy', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
+            //             .attr('id', function (d) { return d.geo; })
+            //             .attr('fill', function (d) {return _getColorScale(d); })
+            //             .transition()
+            //             .duration(150)
+            //             .attr('r', function (d) { return _getRadiusScale(d); });
+            //     };
+            // };
 
-            // Bind our overlay to the map…
-            overlay.setMap(map);
+            // // Bind our overlay to the map…
+            // overlay.setMap(map);
 
             this.update();
         },
@@ -145,48 +168,65 @@ define([
                 .domain([min, max])
                 .range(colorScaleRange);
 
-            layer = d3.select('.bubble');
+            map.data.setStyle(function(feature) {
+                var d = _.find(displayData, function (elem) { return feature.getProperty('name') == elem.name; }),
+                    color = 'transparent';
 
-            marker = layer.selectAll('.marker')
-                .data(displayData, function (d) { return d.geo; });
+                if (d) {
+                    color = _getColorScale(d);
+                }
 
-            markerEnter = marker
-                .enter().append('svg:svg')
-                .each(function (d) { return _this.transform.call(this, d); })
-                .on('mouseenter', function (d) {
-                    _this.displayData.call(this, d);
-                    _this.addHighlight.call(this, d);
-                    _this.addTooltip.call(this, d);
-                })
-                .on('mouseleave', function (d) {
-                    _this.hideData.call(this, d);
-                    _this.removeHighlight.call(this, d);
-                    _this.removeTooltip.call(this, d);
-                })
-                .attr('class', 'marker');
+                return {
+                  fillColor: color,
+                  fillOpacity: 0.7,
+                  strokeWeight: 0.5,
+                  strokeColor: '#aaa'
+                };
+            });
 
-            // Add a circle.
-            markerEnter.append('svg:circle')
-                .attr('cx', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
-                .attr('cy', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
-                .attr('id', function (d) { return d.geo; })
-                .attr('fill', function (d) {return _getColorScale(d); })
-                .transition()
-                .duration(150)
-                .attr('r', function (d) { return _getRadiusScale(d); });
 
-            marker.exit().remove();
+            // layer = d3.select('.bubble');
 
-            marker.each(function (d) { return _this.transform.call(this, d); });
+            // marker = layer.selectAll('.marker')
+            //     .data(displayData, function (d) { return d.geo; });
 
-            marker.select('circle')
-                .attr('cx', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
-                .attr('cy', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
-                .attr('id', function (d) { return d.geo; })
-                .attr('fill', function (d) {return _getColorScale(d); })
-                .transition()
-                .duration(150)
-                .attr('r', function (d) { return _getRadiusScale(d); });
+            // markerEnter = marker
+            //     .enter().append('svg:svg')
+            //     .each(function (d) { return _this.transform.call(this, d); })
+            //     .on('mouseenter', function (d) {
+            //         _this.displayData.call(this, d);
+            //         _this.addHighlight.call(this, d);
+            //         _this.addTooltip.call(this, d);
+            //     })
+            //     .on('mouseleave', function (d) {
+            //         _this.hideData.call(this, d);
+            //         _this.removeHighlight.call(this, d);
+            //         _this.removeTooltip.call(this, d);
+            //     })
+            //     .attr('class', 'marker');
+
+            // // Add a circle.
+            // markerEnter.append('svg:circle')
+            //     .attr('cx', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
+            //     .attr('cy', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
+            //     .attr('id', function (d) { return d.geo; })
+            //     .attr('fill', function (d) {return _getColorScale(d); })
+            //     .transition()
+            //     .duration(150)
+            //     .attr('r', function (d) { return _getRadiusScale(d); });
+
+            // marker.exit().remove();
+
+            // marker.each(function (d) { return _this.transform.call(this, d); });
+
+            // marker.select('circle')
+            //     .attr('cx', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
+            //     .attr('cy', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
+            //     .attr('id', function (d) { return d.geo; })
+            //     .attr('fill', function (d) {return _getColorScale(d); })
+            //     .transition()
+            //     .duration(150)
+            //     .attr('r', function (d) { return _getRadiusScale(d); });
 
         },
 
