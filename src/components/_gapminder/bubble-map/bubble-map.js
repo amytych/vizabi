@@ -7,9 +7,9 @@ define([
 ], function($, d3, _, Component) {
 
     var $mapHolder, $infoDisplayCounter,
-        map, overlay, layer, projection, marker, markerEnter,
+        map, overlay, layer, projection, bubble, bubbleEnter, visuals,
         data, displayData, indicator, time, min, max, radiusScale, colorScale,
-        radiusScaleRange = [3, 15], colorScaleRange = ['#7fb5f5', '#d70927'], markerStrokeWidth = 1.5;
+        radiusScaleRange = [3, 15], colorScaleRange = ['#7fb5f5', '#d70927'], bubbleStrokeWidth = 1.5;
 
     // Once the data is in correct and finalised format
     // this wont be needed
@@ -23,6 +23,14 @@ define([
 
     function _getColorScale (d) {
         return colorScale(_getValue(d));
+    }
+
+    function _bubblesVisible () {
+        return visuals.indexOf('bubble') > -1;
+    }
+
+    function _shapesVisible () {
+        return visuals.indexOf('shape') > -1;
     }
 
     var BubbleMap = Component.extend({
@@ -47,10 +55,11 @@ define([
          */
         postRender: function() {
             var _this = this,
-                mapCenter;
+                mapCenter, geoJSONPath;
 
             time = this.model.getState('time');
             indicator = this.model.getState('indicator');
+            visuals = this.model.getState('visuals');
             data = this.model.getData()[0];
             displayData = data.filter(function(row) { return (row.time == time); });
             min = d3.min(data, function(d) { return _getValue(d); });
@@ -68,7 +77,7 @@ define([
             mapCenter = this.getMapCenter(displayData);
 
             // Create the Google Map…
-            map = new google.maps.Map(d3.select('#bubble-map-holder').node(), {
+            map = new google.maps.Map($mapHolder[0], {
                 zoom: 6,
                 center: mapCenter,
                 mapTypeId: google.maps.MapTypeId.TERRAIN,
@@ -76,16 +85,16 @@ define([
                 streetViewControl: false
             });
 
-            overlay = new google.maps.OverlayView();
-
             // Load a GeoJSON from the same server as our demo.
-            map.data.loadGeoJson('http://localhost:9000/dist/data-waffles/bubble-map/en/geo_json_features.json');
+            geoJSONPath = location.hostname === 'localhost' ? '' : '/u/64730059/gapminder';
+            map.data.loadGeoJson(geoJSONPath + '/data-waffles/bubble-map/en/geo_json_features.json');
 
             map.data.addListener('mouseover', function(event) {
                 var d = _.find(displayData, function (elem) { return event.feature.getProperty('name') == elem.name; });
 
                 if (d) {
                     _this.displayData.call(this, d);
+                    _this.addGeoTooltip.call(this, d, event);
                 }
 
                 map.data.overrideStyle(event.feature, {fillOpacity: 1});
@@ -96,52 +105,57 @@ define([
 
                 if (d) {
                     _this.hideData.call(this, d);
+                    _this.removeGeoTooltip.call(this, d);
                 }
 
                 map.data.revertStyle();
              });
 
+            overlay = new google.maps.OverlayView();
+
             // Add the container when the overlay is added to the map.
-            // overlay.onAdd = function() {
-            //     layer = d3.select(this.getPanes().overlayMouseTarget).append('div')
-            //         .attr('class', 'bubble');
+            if (_bubblesVisible()) {
+                overlay.onAdd = function() {
+                    layer = d3.select(this.getPanes().overlayMouseTarget).append('div')
+                        .attr('class', 'bubble');
 
-            //     // Draw each marker as a separate SVG element.
-            //     // We could use a single SVG, but what size would it have?
-            //     overlay.draw = function() {
-            //         projection = this.getProjection();
+                    // Draw each bubble as a separate SVG element.
+                    // We could use a single SVG, but what size would it have?
+                    overlay.draw = function() {
+                        projection = this.getProjection();
 
-            //         marker = layer.selectAll('svg')
-            //             .data(displayData, function (d) { return d.geo; })
-            //             .each(function (d) { return _this.transform.call(this, d); }) // update existing markers
-            //             .enter().append('svg:svg')
-            //             .each(function (d) { return _this.transform.call(this, d); })
-            //             .on('mouseenter', function (d) {
-            //                 _this.displayData.call(this, d);
-            //                 _this.addHighlight.call(this, d);
-            //                 _this.addTooltip.call(this, d);
-            //             })
-            //             .on('mouseleave', function (d) {
-            //                 _this.hideData.call(this, d);
-            //                 _this.removeHighlight.call(this, d);
-            //                 _this.removeTooltip.call(this, d);
-            //             })
-            //             .attr('class', 'marker');
+                        bubble = layer.selectAll('svg')
+                            .data(displayData, function (d) { return d.geo; })
+                            .each(function (d) { return _this.transform.call(this, d); }) // update existing bubbles
+                            .enter().append('svg:svg')
+                            .each(function (d) { return _this.transform.call(this, d); })
+                            .on('mouseenter', function (d) {
+                                _this.displayData.call(this, d);
+                                _this.addHighlight.call(this, d);
+                                _this.addTooltip.call(this, d);
+                            })
+                            .on('mouseleave', function (d) {
+                                _this.hideData.call(this, d);
+                                _this.removeHighlight.call(this, d);
+                                _this.removeTooltip.call(this, d);
+                            })
+                            .attr('class', 'bubble');
 
-            //         // Add a circle.
-            //         marker.append('svg:circle')
-            //             .attr('cx', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
-            //             .attr('cy', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
-            //             .attr('id', function (d) { return d.geo; })
-            //             .attr('fill', function (d) {return _getColorScale(d); })
-            //             .transition()
-            //             .duration(150)
-            //             .attr('r', function (d) { return _getRadiusScale(d); });
-            //     };
-            // };
+                        // Add a circle.
+                        bubble.append('svg:circle')
+                            .attr('cx', function (d) { return _getRadiusScale(d) + bubbleStrokeWidth; })
+                            .attr('cy', function (d) { return _getRadiusScale(d) + bubbleStrokeWidth; })
+                            .attr('id', function (d) { return d.geo; })
+                            .attr('fill', function (d) {return _getColorScale(d); })
+                            .transition()
+                            .duration(150)
+                            .attr('r', function (d) { return _getRadiusScale(d); });
+                    };
+                };
 
-            // // Bind our overlay to the map…
-            // overlay.setMap(map);
+                // Bind our overlay to the map…
+                overlay.setMap(map);
+            }
 
             this.update();
         },
@@ -157,6 +171,7 @@ define([
 
             time = this.model.getState('time');
             indicator = this.model.getState('indicator');
+            visuals = this.model.getState('visuals');
             data = this.model.getData()[0];
             displayData = data.filter(function(row) { return (row.time == time); });
             min = d3.min(data, function(d) { return _getValue(d); });
@@ -168,65 +183,76 @@ define([
                 .domain([min, max])
                 .range(colorScaleRange);
 
-            map.data.setStyle(function(feature) {
-                var d = _.find(displayData, function (elem) { return feature.getProperty('name') == elem.name; }),
-                    color = 'transparent';
+            if (_shapesVisible()) {
+                map.data.setStyle(function(feature) {
+                    var d = _.find(displayData, function (elem) { return feature.getProperty('name') == elem.name; }),
+                        color = d ? _getColorScale(d) : 'transparent';
 
-                if (d) {
-                    color = _getColorScale(d);
-                }
+                    return {
+                      fillColor: color,
+                      fillOpacity: 0.7,
+                      strokeWeight: 0.5,
+                      strokeColor: '#333'
+                    };
+                });
+            } else {
+                map.data.setStyle(function(feature) {
+                    return {
+                      fillColor: 'transparent',
+                      strokeWeight: 0,
+                      strokeColor: 'transparent'
+                    };
+                });
+            }
 
-                return {
-                  fillColor: color,
-                  fillOpacity: 0.7,
-                  strokeWeight: 0.5,
-                  strokeColor: '#aaa'
-                };
-            });
 
+            // If bubbles should NOT be shown, then just serve them empty array
+            layer = d3.select('.bubble');
+            if (_bubblesVisible()) {
+                bubble = layer.selectAll('.bubble')
+                    .data(displayData, function (d) { return d.geo; });
+            } else {
+                bubble = layer.selectAll('.bubble')
+                    .data([]);
+            }
 
-            // layer = d3.select('.bubble');
+            bubbleEnter = bubble
+                .enter().append('svg:svg')
+                .each(function (d) { return _this.transform.call(this, d); })
+                .on('mouseenter', function (d) {
+                    _this.displayData.call(this, d);
+                    _this.addHighlight.call(this, d);
+                    _this.addTooltip.call(this, d);
+                })
+                .on('mouseleave', function (d) {
+                    _this.hideData.call(this, d);
+                    _this.removeHighlight.call(this, d);
+                    _this.removeTooltip.call(this, d);
+                })
+                .attr('class', 'bubble');
 
-            // marker = layer.selectAll('.marker')
-            //     .data(displayData, function (d) { return d.geo; });
+            // Add a circle.
+            bubbleEnter.append('svg:circle')
+                .attr('cx', function (d) { return _getRadiusScale(d) + bubbleStrokeWidth; })
+                .attr('cy', function (d) { return _getRadiusScale(d) + bubbleStrokeWidth; })
+                .attr('id', function (d) { return d.geo; })
+                .attr('fill', function (d) {return _getColorScale(d); })
+                .transition()
+                .duration(150)
+                .attr('r', function (d) { return _getRadiusScale(d); });
 
-            // markerEnter = marker
-            //     .enter().append('svg:svg')
-            //     .each(function (d) { return _this.transform.call(this, d); })
-            //     .on('mouseenter', function (d) {
-            //         _this.displayData.call(this, d);
-            //         _this.addHighlight.call(this, d);
-            //         _this.addTooltip.call(this, d);
-            //     })
-            //     .on('mouseleave', function (d) {
-            //         _this.hideData.call(this, d);
-            //         _this.removeHighlight.call(this, d);
-            //         _this.removeTooltip.call(this, d);
-            //     })
-            //     .attr('class', 'marker');
+            bubble.exit().remove();
 
-            // // Add a circle.
-            // markerEnter.append('svg:circle')
-            //     .attr('cx', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
-            //     .attr('cy', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
-            //     .attr('id', function (d) { return d.geo; })
-            //     .attr('fill', function (d) {return _getColorScale(d); })
-            //     .transition()
-            //     .duration(150)
-            //     .attr('r', function (d) { return _getRadiusScale(d); });
+            bubble.each(function (d) { return _this.transform.call(this, d); });
 
-            // marker.exit().remove();
-
-            // marker.each(function (d) { return _this.transform.call(this, d); });
-
-            // marker.select('circle')
-            //     .attr('cx', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
-            //     .attr('cy', function (d) { return _getRadiusScale(d) + markerStrokeWidth; })
-            //     .attr('id', function (d) { return d.geo; })
-            //     .attr('fill', function (d) {return _getColorScale(d); })
-            //     .transition()
-            //     .duration(150)
-            //     .attr('r', function (d) { return _getRadiusScale(d); });
+            bubble.select('circle')
+                .attr('cx', function (d) { return _getRadiusScale(d) + bubbleStrokeWidth; })
+                .attr('cy', function (d) { return _getRadiusScale(d) + bubbleStrokeWidth; })
+                .attr('id', function (d) { return d.geo; })
+                .attr('fill', function (d) {return _getColorScale(d); })
+                .transition()
+                .duration(150)
+                .attr('r', function (d) { return _getRadiusScale(d); });
 
         },
 
@@ -263,10 +289,10 @@ define([
             pos = projection.fromLatLngToDivPixel(pos);
 
             return d3.select(this)
-                .attr('width', function (d) { return (_getRadiusScale(d) + markerStrokeWidth) * 2; })
-                .attr('height', function (d) { return (_getRadiusScale(d) + markerStrokeWidth) * 2; })
-                .style('left', function (d) { return (pos.x - _getRadiusScale(d) + markerStrokeWidth * 2) + 'px'; })
-                .style('top', function (d) { return (pos.y - _getRadiusScale(d) + markerStrokeWidth * 2) + 'px'; });
+                .attr('width', function (d) { return (_getRadiusScale(d) + bubbleStrokeWidth) * 2; })
+                .attr('height', function (d) { return (_getRadiusScale(d) + bubbleStrokeWidth) * 2; })
+                .style('left', function (d) { return (pos.x - _getRadiusScale(d) + bubbleStrokeWidth * 2) + 'px'; })
+                .style('top', function (d) { return (pos.y - _getRadiusScale(d) + bubbleStrokeWidth * 2) + 'px'; });
         },
 
         addHighlight: function (d) {
@@ -274,7 +300,7 @@ define([
                 circleEl = element.select('circle'),
                 radius = circleEl.attr('r'),
                 center = circleEl.attr('cx'),
-                newRadius = radius - markerStrokeWidth;
+                newRadius = radius - bubbleStrokeWidth;
 
             element.append('circle')
                 .attr('r', newRadius > 0 ? newRadius : 0)
@@ -290,7 +316,7 @@ define([
                 .attr('cy', center)
                 .attr('class', 'inner');
 
-            element.attr('class', 'marker hover');
+            element.attr('class', 'bubble hover');
 
         },
 
@@ -328,21 +354,29 @@ define([
                 .style('top', topOffset + 'px');
 
             backgroundEl
-                .attr('x', markerStrokeWidth / 2)
-                .attr('y', markerStrokeWidth / 2)
-                .attr('width', tooltipWidth - markerStrokeWidth * 2)
-                .attr('height', tooltipHeight - markerStrokeWidth * 2);
+                .attr('x', bubbleStrokeWidth / 2)
+                .attr('y', bubbleStrokeWidth / 2)
+                .attr('width', tooltipWidth - bubbleStrokeWidth * 2)
+                .attr('height', tooltipHeight - bubbleStrokeWidth * 2);
 
             textEl
-                .attr('x', 5 + markerStrokeWidth)
-                .attr('y', tooltipHeight - 10 - markerStrokeWidth);
+                .attr('x', 5 + bubbleStrokeWidth)
+                .attr('y', tooltipHeight - 10 - bubbleStrokeWidth);
+        },
+
+        addGeoTooltip: function (d, event) {
+            console.log(event);
+        },
+
+        removeGeoTooltip: function (d) {
+
         },
 
         removeHighlight: function (d) {
             var element = d3.select(this);
 
             element
-                .attr('class', 'marker')
+                .attr('class', 'bubble')
                 .selectAll('.inner')
                 .remove();
         },
