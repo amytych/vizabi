@@ -6,32 +6,45 @@ define([
     'base/component'
 ], function($, d3, _, Component) {
 
-    var $mapHolder, $infoDisplayCounter,
+    var $infoDisplayCounter,
         map, overlay, layer, projection, bubble, bubbleEnter, visuals,
-        data, displayData, indicator, time, min, max, radiusScale, colorScale,
+        shapesInitialized, bubblesInitialized,
+        data, displayData, indicator, time, radiusScale, colorScale,
         radiusScaleRange = [3, 15], colorScaleRange = ['#7fb5f5', '#d70927'], bubbleStrokeWidth = 1.5;
 
-    // Once the data is in correct and finalised format
-    // this wont be needed
+
+    // Some handy helpers and accessors
+
+    // Find the node in waffle data (displayData)
+    // based on the name of feature property from geoJSON
+    function _findD (name) {
+        return _.find(displayData, function (elem) { return name == elem.name; });
+    }
+
     function _getValue (d) {
         return d[indicator];
     }
 
+    // radiusScale is always defined before calling
     function _getRadiusScale (d) {
         return radiusScale(_getValue(d));
     }
 
+    // colorScale is always defined before calling
     function _getColorScale (d) {
         return colorScale(_getValue(d));
     }
 
+    // visuals are always defined before calling
     function _bubblesVisible () {
         return visuals.indexOf('bubble') > -1;
     }
 
+    // visuals are always defined before calling
     function _shapesVisible () {
         return visuals.indexOf('shape') > -1;
     }
+
 
     var BubbleMap = Component.extend({
 
@@ -54,108 +67,22 @@ define([
          * Ideally, it contains instantiations related to template
          */
         postRender: function() {
-            var _this = this,
-                mapCenter, geoJSONPath;
+            var _this = this;
 
             time = this.model.getState('time');
-            indicator = this.model.getState('indicator');
-            visuals = this.model.getState('visuals');
             data = this.model.getData()[0];
             displayData = data.filter(function(row) { return (row.time == time); });
-            min = d3.min(data, function(d) { return _getValue(d); });
-            max = d3.max(data, function(d) { return _getValue(d); });
-            radiusScale = d3.scale.linear()
-                .domain([min, max])
-                .range(radiusScaleRange);
-            colorScale = d3.scale.linear()
-                .domain([min, max])
-                .range(colorScaleRange);
 
-            $mapHolder = $('#bubble-map-holder');
             $infoDisplayCounter = $('#bubble-map-info-display-counter');
 
-            mapCenter = this.getMapCenter(displayData);
-
             // Create the Google Map…
-            map = new google.maps.Map($mapHolder[0], {
+            map = new google.maps.Map(document.getElementById('bubble-map-holder'), {
                 zoom: 6,
-                center: mapCenter,
+                center: _this.getMapCenter(displayData),
                 mapTypeId: google.maps.MapTypeId.TERRAIN,
                 mapTypeControl: false,
                 streetViewControl: false
             });
-
-            // Load a GeoJSON from the same server as our demo.
-            geoJSONPath = location.hostname === 'localhost' ? '' : '/u/64730059/gapminder';
-            map.data.loadGeoJson(geoJSONPath + '/data-waffles/bubble-map/en/geo_json_features.json');
-
-            map.data.addListener('mouseover', function(event) {
-                var d = _.find(displayData, function (elem) { return event.feature.getProperty('name') == elem.name; });
-
-                if (d) {
-                    _this.displayData.call(this, d);
-                    _this.addGeoTooltip.call(this, d, event);
-                }
-
-                map.data.overrideStyle(event.feature, {fillOpacity: 1});
-             });
-
-            map.data.addListener('mouseout', function(event) {
-                var d = _.find(displayData, function (elem) { return event.feature.getProperty('name') == elem.name; });
-
-                if (d) {
-                    _this.hideData.call(this, d);
-                    _this.removeGeoTooltip.call(this, d);
-                }
-
-                map.data.revertStyle();
-             });
-
-            overlay = new google.maps.OverlayView();
-
-            // Add the container when the overlay is added to the map.
-            if (_bubblesVisible()) {
-                overlay.onAdd = function() {
-                    layer = d3.select(this.getPanes().overlayMouseTarget).append('div')
-                        .attr('class', 'bubble');
-
-                    // Draw each bubble as a separate SVG element.
-                    // We could use a single SVG, but what size would it have?
-                    overlay.draw = function() {
-                        projection = this.getProjection();
-
-                        bubble = layer.selectAll('svg')
-                            .data(displayData, function (d) { return d.geo; })
-                            .each(function (d) { return _this.transform.call(this, d); }) // update existing bubbles
-                            .enter().append('svg:svg')
-                            .each(function (d) { return _this.transform.call(this, d); })
-                            .on('mouseenter', function (d) {
-                                _this.displayData.call(this, d);
-                                _this.addHighlight.call(this, d);
-                                _this.addTooltip.call(this, d);
-                            })
-                            .on('mouseleave', function (d) {
-                                _this.hideData.call(this, d);
-                                _this.removeHighlight.call(this, d);
-                                _this.removeTooltip.call(this, d);
-                            })
-                            .attr('class', 'bubble');
-
-                        // Add a circle.
-                        bubble.append('svg:circle')
-                            .attr('cx', function (d) { return _getRadiusScale(d) + bubbleStrokeWidth; })
-                            .attr('cy', function (d) { return _getRadiusScale(d) + bubbleStrokeWidth; })
-                            .attr('id', function (d) { return d.geo; })
-                            .attr('fill', function (d) {return _getColorScale(d); })
-                            .transition()
-                            .duration(150)
-                            .attr('r', function (d) { return _getRadiusScale(d); });
-                    };
-                };
-
-                // Bind our overlay to the map…
-                overlay.setMap(map);
-            }
 
             this.update();
         },
@@ -167,93 +94,35 @@ define([
          * Ideally, it contains only operations related to data events
          */
         update: function() {
-            var _this = this;
+            var min, max;
 
-            time = this.model.getState('time');
-            indicator = this.model.getState('indicator');
-            visuals = this.model.getState('visuals');
-            data = this.model.getData()[0];
+            time        = this.model.getState('time');
+            indicator   = this.model.getState('indicator');
+            visuals     = this.model.getState('visuals');
+            data        = this.model.getData()[0];
             displayData = data.filter(function(row) { return (row.time == time); });
-            min = d3.min(data, function(d) { return _getValue(d); });
-            max = d3.max(data, function(d) { return _getValue(d); });
-            radiusScale = d3.scale.linear()
-                .domain([min, max])
-                .range(radiusScaleRange);
-            colorScale = d3.scale.linear()
-                .domain([min, max])
-                .range(colorScaleRange);
+            min         = d3.min(data, function(d) { return _getValue(d); });
+            max         = d3.max(data, function(d) { return _getValue(d); });
+            radiusScale = d3.scale.linear().domain([min, max]).range(radiusScaleRange);
+            colorScale  = d3.scale.linear().domain([min, max]).range(colorScaleRange);
 
-            if (_shapesVisible()) {
-                map.data.setStyle(function(feature) {
-                    var d = _.find(displayData, function (elem) { return feature.getProperty('name') == elem.name; }),
-                        color = d ? _getColorScale(d) : 'transparent';
-
-                    return {
-                      fillColor: color,
-                      fillOpacity: 0.7,
-                      strokeWeight: 0.5,
-                      strokeColor: '#333'
-                    };
-                });
-            } else {
-                map.data.setStyle(function(feature) {
-                    return {
-                      fillColor: 'transparent',
-                      strokeWeight: 0,
-                      strokeColor: 'transparent'
-                    };
-                });
+            // Load the GeoJSON, make sure it happens only once
+            if (_shapesVisible() && !shapesInitialized) {
+                this.initializeGeoShapes();
             }
 
+            // Update styles for visible and hidden geo shapes
+            this.styleGeoShapes();
 
-            // If bubbles should NOT be shown, then just serve them empty array
-            layer = d3.select('.bubble');
-            if (_bubblesVisible()) {
-                bubble = layer.selectAll('.bubble')
-                    .data(displayData, function (d) { return d.geo; });
-            } else {
-                bubble = layer.selectAll('.bubble')
-                    .data([]);
+            if (_bubblesVisible() && !bubblesInitialized) {
+                this.initializeBubbles();
             }
 
-            bubbleEnter = bubble
-                .enter().append('svg:svg')
-                .each(function (d) { return _this.transform.call(this, d); })
-                .on('mouseenter', function (d) {
-                    _this.displayData.call(this, d);
-                    _this.addHighlight.call(this, d);
-                    _this.addTooltip.call(this, d);
-                })
-                .on('mouseleave', function (d) {
-                    _this.hideData.call(this, d);
-                    _this.removeHighlight.call(this, d);
-                    _this.removeTooltip.call(this, d);
-                })
-                .attr('class', 'bubble');
-
-            // Add a circle.
-            bubbleEnter.append('svg:circle')
-                .attr('cx', function (d) { return _getRadiusScale(d) + bubbleStrokeWidth; })
-                .attr('cy', function (d) { return _getRadiusScale(d) + bubbleStrokeWidth; })
-                .attr('id', function (d) { return d.geo; })
-                .attr('fill', function (d) {return _getColorScale(d); })
-                .transition()
-                .duration(150)
-                .attr('r', function (d) { return _getRadiusScale(d); });
-
-            bubble.exit().remove();
-
-            bubble.each(function (d) { return _this.transform.call(this, d); });
-
-            bubble.select('circle')
-                .attr('cx', function (d) { return _getRadiusScale(d) + bubbleStrokeWidth; })
-                .attr('cy', function (d) { return _getRadiusScale(d) + bubbleStrokeWidth; })
-                .attr('id', function (d) { return d.geo; })
-                .attr('fill', function (d) {return _getColorScale(d); })
-                .transition()
-                .duration(150)
-                .attr('r', function (d) { return _getRadiusScale(d); });
-
+            // layer is assigned upon initialization, this.drawBubbles() is also called then
+            // no need to do it twice
+            if (layer) {
+                this.drawBubbles();
+            }
         },
 
         /*
@@ -285,7 +154,6 @@ define([
 
         transform: function (d) {
             var pos = new google.maps.LatLng(d.lat, d.lon);
-
             pos = projection.fromLatLngToDivPixel(pos);
 
             return d3.select(this)
@@ -365,7 +233,7 @@ define([
         },
 
         addGeoTooltip: function (d, event) {
-            console.log(event);
+
         },
 
         removeGeoTooltip: function (d) {
@@ -404,6 +272,131 @@ define([
         getMapCenter: function (locations) {
             var bounds = this.getMapBounds(locations);
             return bounds.getCenter();
+        },
+
+        initializeBubbles: function () {
+            var _this = this;
+
+            overlay = new google.maps.OverlayView();
+
+            // Add the container when the overlay is added to the map.
+            overlay.onAdd = function() {
+                layer = d3.select(this.getPanes().overlayMouseTarget).append('div')
+                    .attr('class', 'bubbles');
+
+                // Draw each bubble as a separate SVG element.
+                overlay.draw = function() {
+                    projection = this.getProjection();
+                    _this.drawBubbles();
+                };
+            };
+
+            // Bind our overlay to the map…
+            overlay.setMap(map);
+
+            bubblesInitialized = true;
+        },
+
+        drawBubbles: function () {
+            var _this = this;
+
+            bubble = layer.selectAll('.bubble')
+                .data(_bubblesVisible() ? displayData : [], function (d) {return d.geo; });
+
+            // Create new bubbles
+            bubbleEnter = bubble
+                .enter().append('svg:svg')
+                .on('mouseenter', function (d) {
+                    _this.displayData.call(this, d);
+                    _this.addHighlight.call(this, d);
+                    _this.addTooltip.call(this, d);
+                })
+                .on('mouseleave', function (d) {
+                    _this.hideData.call(this, d);
+                    _this.removeHighlight.call(this, d);
+                    _this.removeTooltip.call(this, d);
+                })
+                .attr('class', 'bubble');
+
+            // Add a circle.
+            bubbleEnter
+                .append('svg:circle')
+                .attr('cx', function (d) { return _getRadiusScale(d) + bubbleStrokeWidth; })
+                .attr('cy', function (d) { return _getRadiusScale(d) + bubbleStrokeWidth; })
+                .attr('id', function (d) { return d.geo; })
+                .attr('fill', function (d) {return _getColorScale(d); })
+                .attr('r', function (d) { return _getRadiusScale(d); });
+
+            // Remove bubbles that are no longer in the data
+            bubble.exit().remove();
+
+            // Update existing bubbles
+            bubble.each(function (d) { return _this.transform.call(this, d); })
+
+            bubble.select('circle')
+                .attr('cx', function (d) { return _getRadiusScale(d) + bubbleStrokeWidth; })
+                .attr('cy', function (d) { return _getRadiusScale(d) + bubbleStrokeWidth; })
+                .attr('id', function (d) { return d.geo; })
+                .attr('fill', function (d) {return _getColorScale(d); })
+                .transition()
+                .duration(150)
+                .attr('r', function (d) { return _getRadiusScale(d); });
+
+        },
+
+        initializeGeoShapes: function () {
+            var _this = this,
+                geoJSONPath = location.hostname === 'localhost' ? '' : '/u/64730059/gapminder';
+
+            map.data.loadGeoJson(geoJSONPath + '/data-waffles/bubble-map/en/geo_json_features.json');
+
+            map.data.addListener('mouseover', function(event) {
+                var d = _findD(event.feature.getProperty('name'));
+
+                if (d) {
+                    _this.displayData.call(this, d);
+                    _this.addGeoTooltip.call(this, d, event);
+                }
+
+                map.data.overrideStyle(event.feature, {fillOpacity: 1});
+             });
+
+            map.data.addListener('mouseout', function(event) {
+                var d = _findD(event.feature.getProperty('name'));
+
+                if (d) {
+                    _this.hideData.call(this, d);
+                    _this.removeGeoTooltip.call(this, d);
+                }
+
+                map.data.revertStyle();
+             });
+
+            shapesInitialized = true;
+        },
+
+        styleGeoShapes: function () {
+            if (_shapesVisible()) {
+                map.data.setStyle(function(feature) {
+                    var d = _findD(feature.getProperty('name')),
+                        color = d ? _getColorScale(d) : 'transparent';
+
+                    return {
+                      fillColor: color,
+                      fillOpacity: 0.7,
+                      strokeWeight: 0.5,
+                      strokeColor: '#333'
+                    };
+                });
+            } else {
+                map.data.setStyle(function(feature) {
+                    return {
+                      fillColor: 'transparent',
+                      strokeWeight: 0,
+                      strokeColor: 'transparent'
+                    };
+                });
+            }
         }
     });
 
