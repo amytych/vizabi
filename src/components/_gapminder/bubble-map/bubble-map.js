@@ -7,13 +7,13 @@ define([
 ], function($, d3, _, Component) {
 
     var $infoDisplayCounter,
-        map, overlay, layer, projection, bubble, bubbleEnter, visuals,
+        map, overlay, projection, bubbleLayer, bubble, bubbleEnter,
         shapesInitialized, bubblesInitialized,
-        data, displayData, indicator, time, radiusScale, colorScale,
+        data, displayData, indicator, time, radiusScale, colorScale, visuals,
         radiusScaleRange = [3, 15], colorScaleRange = ['#7fb5f5', '#d70927'], bubbleStrokeWidth = 1.5;
 
 
-    // Some handy helpers and accessors
+    // Some handy helpers and getters
 
     // Find the node in waffle data (displayData)
     // based on the name of feature property from geoJSON
@@ -118,9 +118,9 @@ define([
                 this.initializeBubbles();
             }
 
-            // layer is assigned upon initialization, this.drawBubbles() is also called then
+            // bubbleLayer is assigned upon initialization, this.drawBubbles() is also called then
             // no need to do it twice
-            if (layer) {
+            if (bubbleLayer) {
                 this.drawBubbles();
             }
         },
@@ -195,7 +195,7 @@ define([
                 tooltipWidth, tooltipHeight;
 
             // Create and append tooltip holder
-            tooltipEl = layer.append('svg')
+            tooltipEl = bubbleLayer.append('svg')
                 .attr('class', 'tooltip');
 
             // Create and append tooltip background
@@ -250,7 +250,7 @@ define([
         },
 
         removeTooltip: function (d) {
-            layer.select('.tooltip').remove();
+            bubbleLayer.select('.tooltip').remove();
         },
 
         // Just a mockup
@@ -281,7 +281,7 @@ define([
 
             // Add the container when the overlay is added to the map.
             overlay.onAdd = function() {
-                layer = d3.select(this.getPanes().overlayMouseTarget).append('div')
+                bubbleLayer = d3.select(this.getPanes().overlayMouseTarget).append('div')
                     .attr('class', 'bubbles');
 
                 // Draw each bubble as a separate SVG element.
@@ -300,7 +300,7 @@ define([
         drawBubbles: function () {
             var _this = this;
 
-            bubble = layer.selectAll('.bubble')
+            bubble = bubbleLayer.selectAll('.bubble')
                 .data(_bubblesVisible() ? displayData : [], function (d) {return d.geo; });
 
             // Create new bubbles
