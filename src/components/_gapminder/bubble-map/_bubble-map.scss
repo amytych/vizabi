@@ -2,6 +2,36 @@ $clrMarker: #f84e67;
 $clrMarkerStroke: darken($clrMarker, 50%);
 $clrMarkerHover: darken($clrMarker, 20%);
 
+.background {
+  fill: #aef3fa;
+  pointer-events: all;
+}
+
+.area {
+    fill: transparent;
+}
+
+.land {
+  fill: #fff;
+  cursor: pointer;
+}
+
+.district {
+    stroke: #eee;
+    fill-opacity: .5
+}
+
+.district.hover {
+  fill-opacity: 1;
+}
+
+.boundary {
+  fill: none;
+  stroke: #eee;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 //general styles
 #bubble-map-info-display {
     position: absolute;
@@ -37,38 +67,36 @@ $clrMarkerHover: darken($clrMarker, 20%);
     }
 
     .hover {
-        cursor: pointer;
-        z-index: 1000;
-
-        circle {
-            fill: $clrMarkerHover;
-            stroke: $clrMarkerHover;
-        }
-
-        .inner {
-            stroke-width: 0;
-        }
-
-        .inner1 {
-            fill: white;
-        }
+        position: relative;
+        z-index: 5;
+        fill: $clrMarkerHover;
+        stroke: $clrMarkerHover;
     }
 
-    .tooltip {
-        position: absolute;
-        z-index: 99999;
+    .inner {
+        fill: $clrMarkerHover;
+        stroke-width: 0;
+    }
 
-        rect {
-            fill: #129dd5;
-            stroke: #074058;
-            stroke-with: 1.5;
-        }
-
-        text {
-            fill: white;
-        }
+    .inner1 {
+        fill: white;
     }
 }
+
+.bubble-map-tooltip {
+    position: absolute;
+    z-index: 99999;
+    background-color: #129dd5;
+    border: 1px solid #074058;
+    font-size: 11px;
+    color: #fff;
+    padding: 5px;
+
+    &.hidden {
+        display: none;
+    }
+}
+
 
 //large specific styles
 &.large {
