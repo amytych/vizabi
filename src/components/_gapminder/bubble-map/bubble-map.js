@@ -10,18 +10,19 @@ define([
     var width, height,
         $mapHolder, $infoDisplayCounter,
         projection, zoom, path, svg, g, overlay, tooltip,
-        bubbleLayer, bubble, bubbleEnter,
-        shapesInitialized, bubblesInitialized,
-        districts, data, displayData, indicator, time, radiusScale, colorScale, visuals, active, geoJSONPath,
+        gmBubbleLayer, bubble, bubbleEnter,
+        geoJSONData, gmDistrictSVG, gmDistrictLayer, gmDistrict,
+        gmInitialized, gmOverlayInitialized, gmDistrictsInitialized, gmBubblesInitialized,
+        data, currentData, indicator, time, radiusScale, colorScale, visuals, geoJSONPath, currentRender,
         radiusScaleRange = [3, 15], colorScaleRange = ['#7fb5f5', '#d70927'], bubbleStrokeWidth = 1.5;
 
 
     // Some handy helpers and getters
 
-    // Find the node in waffle data (displayData)
+    // Find the node in waffle data (currentData)
     // based on the name of feature property from geoJSON
     function _findD (name) {
-        return _.find(displayData, function (elem) { return name == elem.name; });
+        return _.find(currentData, function (elem) { return name == elem.name; });
     }
 
     function _getValue (d) {
@@ -46,6 +47,17 @@ define([
     // visuals are always defined before calling
     function _shapesVisible () {
         return visuals.indexOf('shape') > -1;
+    }
+
+    function _renderOffline () {
+        return typeof google === 'undefined' || renderType === 'offline';
+    }
+
+    // Turn the overlay projection into a d3 projection
+    function _gmProjection (coordinates) {
+        var googleCoordinates = new google.maps.LatLng(coordinates[1], coordinates[0]),
+            pixelCoordinates = projection.fromLatLngToDivPixel(googleCoordinates);
+        return [pixelCoordinates.x + 4000, pixelCoordinates.y + 4000];
     }
 
 
@@ -73,7 +85,7 @@ define([
             var _this = this,
                 min, max;
 
-            geoJSONPath = location.hostname === 'localhost' ? '' : '/u/64730059/gapminder2';
+            geoJSONPath = location.hostname === 'localhost' ? '' : '/u/64730059/gapminder';
             geoJSONPath += '/data-waffles/bubble-map/en/topo_json_features.json';
 
             time        = this.model.getState('time');
@@ -81,12 +93,17 @@ define([
             visuals     = this.model.getState('visuals');
             panValue    = this.model.getState('pan') || [-8.3, 9];
             zoomValue   = this.model.getState('zoom') || 1;
+            renderType  = this.model.getState('render') || 'online';
             data        = this.model.getData()[0];
-            displayData = data.filter(function(row) { return (row.time == time); });
+            currentData = data.filter(function(row) { return (row.time == time); });
             min         = d3.min(data, function(d) { return _getValue(d); });
             max         = d3.max(data, function(d) { return _getValue(d); });
             radiusScale = d3.scale.linear().domain([min, max]).range(radiusScaleRange);
             colorScale  = d3.scale.linear().domain([min, max]).range(colorScaleRange);
+
+            // Needed for simple change of the rendering mode
+            // it's just for the testing phase, to be removed in the final code
+            currentRender = renderType;
 
             $mapHolder = $('#bubble-map-holder');
             $infoDisplayCounter = $('#bubble-map-info-display-counter');
@@ -95,78 +112,12 @@ define([
             width = $mapHolder.width();
             height = $mapHolder.height();
 
-            if (typeof google === 'undefined') {
+            if (_renderOffline()) {
                 this.initializeD3Map();
             } else {
-                this.initializeGoogleMap();
+                this.initializeGMap();
             }
         },
-
-        initializeGoogleMap: function () {
-            console.log('dupa');
-        },
-
-        initializeD3Map: function () {
-            var _this = this,
-                worldJSONPath = location.hostname === 'localhost' ? '' : '/u/64730059/gapminder2';
-
-            worldJSONPath += '/data-waffles/bubble-map/en/world.json';
-
-            active = d3.select(null);
-
-            projection = d3.geo.mercator()
-                // .center(panValue)
-                .scale((width - 1) / 2 / Math.PI)
-                .translate([width / 2, height / 2]);
-
-            zoom = d3.behavior.zoom()
-                .translate([0, 0])
-                .scale(zoomValue)
-                .scaleExtent([1, 50])
-                .on('zoom', _this.zoomHandler);
-
-            path = d3.geo.path()
-                .projection(projection);
-
-            svg = d3.select('#bubble-map-holder').append('svg')
-                .attr('width', width)
-                .attr('height', height);
-
-            overlay = svg.append('rect')
-                  .attr('class', 'background')
-                  .attr('width', width)
-                  .attr('height', height)
-                  .on("click", _this.reset);
-
-            g = svg.append('g');
-
-            svg
-                .call(zoom);
-            //     .call(zoom.event);
-
-            // console.log($(this.placeholder[0])).add;
-            // this.parent.element.classed('loading', true);
-            // console.log($(this.parent.element).hasClass('loading'));
-
-            // First, create the world
-            d3.json(worldJSONPath, function(error, world) {
-                if (error) return console.log(error);
-
-                // Now, load the districts
-                d3.json(geoJSONPath, function(error, geo) {
-                    if (error) return console.log(error);
-
-                    // Put all the countries on the map
-                    _this.drawWorld(world);
-
-                    // Put all the districts on the map
-                    _this.drawDistricts(geo);
-
-                    _this.update();
-                });
-            });
-        },
-
 
         /*
          * UPDATE:
@@ -181,26 +132,24 @@ define([
             visuals     = this.model.getState('visuals');
             panValue    = this.model.getState('pan') || [-8.3, 9];
             zoomValue   = this.model.getState('zoom') || 1;
+            renderType  = this.model.getState('render') || 'online';
             data        = this.model.getData()[0];
-            displayData = data.filter(function(row) { return (row.time == time); });
+            currentData = data.filter(function(row) { return (row.time == time); });
             min         = d3.min(data, function(d) { return _getValue(d); });
             max         = d3.max(data, function(d) { return _getValue(d); });
             radiusScale = d3.scale.linear().domain([min, max]).range(radiusScaleRange);
             colorScale  = d3.scale.linear().domain([min, max]).range(colorScaleRange);
 
-            // Udpdate the disctirct colors
-            g.selectAll('.district')
-                .data(districts, function (d) {return d.properties.name; })
-                .style('fill', function(d, i) {
-                    var node = _findD(d.properties.name);
-                    return node ? _getColorScale(node) : '#fff';
-                });
+            // If render type has changed, the map have to be initialized again
+            // simply reload the page to take care of that
+            // it's just for the testing phase, to be removed in the final code
+            if (currentRender !== renderType) window.location.reload();
 
-            // Update bubbles
-            _this.drawBubbles();
-
-            // Update scaling
-            svg.call(zoom.event);
+            if (_renderOffline()) {
+                this.updateD3Map();
+            } else {
+                this.updateGMap();
+            }
         },
 
         /*
@@ -215,132 +164,320 @@ define([
             width = $mapHolder.width();
             height = $mapHolder.height();
 
-            // switch(layout) {
-            //     case 'small':
-            //         s = 2200;
-            //         t = [-2280, -3286];
-            //         break;
 
-            //     case 'medium':
-            //         s = 3000;
-            //         t = [-2580, -3786]
-            //         break;
-
-            //     case 'large':
-            //     default:
-            //         s = 3500;
-            //         t = [-height * 5, -width * 50];
-            // }
-
-            // projection
-            //     .center([-8.3, 9])
-            //     .scale(s)
-            //     .translate(t)
-            //     .translate([width / 1.2, height / 2]);
-
-            // path.projection(projection);
-
-            svg
-                .attr('width', width)
-                .attr('height', height);
-
-            overlay
-                  .attr('width', width)
-                  .attr('height', height);
-
-            // g.selectAll('.district')
-            //     .attr('d', path);
-
-            // g.selectAll('.bubble')
-            //     .attr("cx", function(d) { return projection([d.lon, d.lat])[0]; })
-            //     .attr("cy", function(d) { return projection([d.lon, d.lat])[1]; })
+            if (_renderOffline()) {
+                svg.attr('width', width).attr('height', height);
+                overlay.attr('width', width).attr('height', height);
+            } else {
+                // if (gmDistrictSVG) {
+                //     gmDistrictSVG.attr('width', width).attr('height', height);
+                // }
+            }
         },
 
-        zoomHandler: function() {
-            var scale = d3.event.scale;
-
-            g.selectAll('.bubble').attr('r', function (d) { return _getRadiusScale(d) / scale; })
-            g.style("stroke-width", .5 / scale + "px");
-            g.attr('transform', 'translate(' + d3.event.translate + ')scale(' + scale + ')');
-        },
-
-        showTooltip: function (d) {
-            var mouse = d3.mouse(svg.node()).map( function(d) { return parseInt(d); } );
-
-            tooltip
-                .classed("hidden", false)
-                .attr("style", "left:" + (mouse[0] + 10)+"px; top:" + (mouse[1] + 10) + "px")
-                .html(d.name || d.properties.name);
-        },
-
-        hideTooltip: function (d) {
-            tooltip.classed("hidden", true);
-        },
-
-        addHighlight: function (d) {
-            var circleEl = d3.select(this),
-                radius = circleEl.attr('r'),
-                cx = circleEl.attr('cx'),
-                cy = circleEl.attr('cy'),
-                newRadius = radius - bubbleStrokeWidth;
-
-            circleEl.attr('class', 'bubble hover');
-
-        },
-
-        removeHighlight: function (d) {
-            var circleEl = d3.select(this);
-
-            circleEl.attr('class', 'bubble');
-        },
-
-        // Just a mockup
-        // Will do it properly when the data format will be confirmed
-        displayData: function (d) {
-            $infoDisplayCounter.text(_getValue(d));
-        },
-
-        hideData: function (d) {
-            $infoDisplayCounter.text('');
-        },
-
-        getMapBounds: function (locations) {
-
-        },
-
-        getMapCenter: function (locations) {
-
-        },
-
-        initializeBubbles: function () {
-
-        },
-
-        drawBubbles: function () {
+        initializeGMap: function () {
             var _this = this;
 
+            // Create the Google Map…
+            map = new google.maps.Map(document.getElementById('bubble-map-holder'), {
+                zoom: 6,
+                center: _this.getMapCenter(currentData),
+                mapTypeId: google.maps.MapTypeId.TERRAIN,
+                mapTypeControl: false,
+                streetViewControl: false
+            });
 
-            bubble = g.selectAll(".bubble")
-                .data(_bubblesVisible() ? displayData : [], function (d) {return d.geo; });
+            gmInitialized = true;
 
-            if (d3.event) console.log(d3.event.scale);
+            _this.update();
+        },
 
-            bubble
-                .enter().append("circle")
+        initializeGMapOverlay: function () {
+            var _this = this;
+
+            overlay = new google.maps.OverlayView();
+
+            overlay.onAdd = function () {
+                // Geo Shapes
+                gmDistrictLayer = d3.select(this.getPanes().overlayMouseTarget).append('div')
+                    .attr('class', 'geoshapes-overlay');
+                gmDistrictSVG = gmDistrictLayer.append('svg:svg');
+
+                // Bubbles
+                gmBubbleLayer = d3.select(this.getPanes().overlayMouseTarget).append('div')
+                    .attr('class', 'bubbles-overlay');
+
+                overlay.draw = function () {
+                    projection = this.getProjection();
+
+                    if (_shapesVisible()) {
+                        // Make sure that district JSON is loaded
+                        if (!gmDistrictsInitialized) {
+                            d3.json(geoJSONPath, _this.geoJSONCallback.bind(_this));
+                        } else {
+                            _this.drawGMapDistricts();
+                        }
+                    }
+
+                    if (_bubblesVisible()) {
+                        _this.drawGMapBubbles();
+                        gmBubblesInitialized = true;
+                    }
+                };
+            };
+
+            overlay.setMap(map);
+
+            gmOverlayInitialized = true;
+        },
+
+        updateGMap: function () {
+            var _this = this;
+
+            // Initialize google map overlay, when update() is called first time
+            if (!gmOverlayInitialized) {
+                _this.initializeGMapOverlay();
+            }
+
+            // gmDistrictLayer is assigned upon initialization, this.drawGMapDistricts() is also called then
+            // no need to do it twice
+            if (gmDistrictLayer) {
+                // Make sure that district JSON is loaded
+                if (!gmDistrictsInitialized) {
+                    d3.json(geoJSONPath, _this.geoJSONCallback.bind(_this));
+                } else {
+                    _this.drawGMapDistricts();
+                }
+            }
+
+            // gmBubbleLayer is assigned upon initialization, this.drawGMapBubbles() is also called then
+            // no need to do it twice
+            if (gmBubbleLayer) {
+                _this.drawGMapBubbles();
+            }
+        },
+
+        drawGMapBubbles: function () {
+            var _this = this;
+
+            bubble = gmBubbleLayer.selectAll('.bubble-holder')
+                .data(_bubblesVisible() ? currentData : [], function (d) { return d.geo; });
+
+            // Create new bubbles
+            bubbleEnter = bubble
+                .enter().append('svg:svg')
+                .attr('class', 'bubble-holder');
+
+            // Add a circle.
+            bubbleEnter
+                .append('svg:circle')
                 .attr('class', 'bubble')
-                .attr("cx", function(d) { return projection([d.lon, d.lat])[0]; })
-                .attr("cy", function(d) { return projection([d.lon, d.lat])[1]; })
                 .on('mouseenter', function (d) {
-                    _this.displayData.call(this, d);
+                    _this.showData(d);
                     _this.addHighlight.call(this, d);
                 })
                 .on('mousemove', function (d) {
-                    _this.showTooltip.call(this, d);
+                    _this.showTooltip(d);
                 })
                 .on('mouseleave', function (d) {
-                    _this.hideData.call(this, d);
-                    _this.removeHighlight.call(this, d);
-                    _this.hideTooltip.call(this, d);
+                    _this.hideData();
+                    _this.removeHighlight.call(this);
+                    _this.hideTooltip();
+                })
+                .attr('r', function (d) { return _getRadiusScale(d); });
+
+            // Remove bubbles that are no longer in the data
+            bubble.exit().remove();
+
+            // Update existing bubbles
+            bubble.each(function (d) { return _this.transform.call(this, d); });
+
+            bubble.select('circle')
+                .attr('cx', function (d) { return _getRadiusScale(d) + bubbleStrokeWidth; })
+                .attr('cy', function (d) { return _getRadiusScale(d) + bubbleStrokeWidth; })
+                .attr('id', function (d) { return d.geo; })
+                .attr('fill', function (d) { return _getColorScale(d); })
+                .transition()
+                .duration(150)
+                .attr('r', function (d) { return _getRadiusScale(d); });
+        },
+
+        /**
+         * Draw districts on the google map
+         * @return {Void}
+         */
+        drawGMapDistricts: function () {
+            var _this = this,
+                districts = [],
+                path = d3.geo.path().projection(_gmProjection);
+
+            if (_shapesVisible()) {
+                districts = topojson.feature(geoJSONData, geoJSONData.objects.districts).features;
+                // Filter districts based on currentData
+                districts = _.filter(districts, function (district) { return _findD(district.properties.name); });
+            }
+
+            gmDistrict = gmDistrictSVG.selectAll('.district')
+                .data(districts, function (d) { return 'district-' + d.properties.name; });
+
+            // Create new districts
+            gmDistrict
+                .enter().append('svg:path')
+                .attr('class', 'district')
+                .on('mouseenter', function (d) {
+                    var d = _findD(d.properties.name);
+                    if (d) {
+                        _this.showData(d);
+                    }
+                })
+                .on('mousemove', function (d) {
+                    var d = _findD(d.properties.name);
+                    if (d) {
+                        _this.showTooltip(d);
+                    }
+                })
+                .on('mouseleave', function (d) {
+                    _this.hideData();
+                    _this.hideTooltip();
+                });
+
+            // Remove districts that are no longer in the data
+            gmDistrict.exit().remove();
+
+            // Update exisiting districts
+            gmDistrict
+                .attr('d', path)
+                .attr('fill', function (d) {
+                    var d = _findD(d.properties.name),
+                    color = d ? _getColorScale(d) : 'transparent';
+                    return color;
+                });
+        },
+
+        /**
+         * Build the d3 world map and draw the districts
+         * @return {Void}
+         */
+        initializeD3Map: function () {
+            var _this = this,
+                worldJSONPath = location.hostname === 'localhost' ? '' : '/u/64730059/gapminder';
+
+            worldJSONPath += '/data-waffles/bubble-map/en/world.json';
+
+            projection = d3.geo.mercator()
+                .scale((width - 1) / 2 / Math.PI)
+                .translate([width / 2, height / 2]);
+
+            zoom = d3.behavior.zoom()
+                .translate([0, 0])
+                .scale(zoomValue)
+                .scaleExtent([1, 400])
+                .on('zoom', _this.zoomHandler);
+
+            path = d3.geo.path()
+                .projection(projection);
+
+            svg = d3.select('#bubble-map-holder').append('svg')
+                .attr('width', width)
+                .attr('height', height);
+
+            overlay = svg.append('rect')
+                  .attr('class', 'background')
+                  .attr('width', width)
+                  .attr('height', height)
+                  .on('click', _this.reset);
+
+            g = svg.append('g');
+
+            svg.call(zoom);
+
+            // First, create the world
+            d3.json(worldJSONPath, function(error, world) {
+                if (error) return console.log(error);
+
+                // Now, load the districts
+                d3.json(geoJSONPath, function(error, geo) {
+                    if (error) return console.log(error);
+
+                    // Cache it for later use
+                    geoJSONData = geo;
+
+                    // Put all the countries on the map,
+                    _this.drawD3World(world);
+
+                    // Put all the districts on the map
+                    _this.drawD3Districts(geo);
+
+                    _this.update();
+                });
+            });
+        },
+
+        /**
+         * Update districts and bubbles on the map, and scale everyting accordingly
+         * @return {Void}
+         */
+        updateD3Map: function () {
+            // Udpdate the disctirct colors
+            g.selectAll('.district')
+                .data(districts, function (d) {return d.properties.name; })
+                .style('fill', function(d, i) {
+                    var node = _findD(d.properties.name);
+                    return node ? _getColorScale(node) : '#fff';
+                });
+
+            // Update bubbles
+            this.drawD3Bubbles();
+
+            // Update scaling
+            svg.call(zoom.event);
+        },
+
+        /**
+         * Create simple map of the world in d3
+         * @param  {Object} world geoJSON data for the world
+         * @return {Void}
+         */
+        drawD3World: function (world) {
+            // Draw land
+            g.append('path')
+                .datum(topojson.merge(world, world.objects.countries.geometries))
+                .attr('class', 'land')
+                .attr('d', path);
+
+            // Draw countries borders
+            g.append('path')
+                .datum(topojson.mesh(world, world.objects.countries, function(a, b) { return a !== b; }))
+                .attr('class', 'boundary')
+                .attr('d', path);
+        },
+
+        /**
+         * Draw d3 bubbles on the map
+         * @return {Void}
+         */
+        drawD3Bubbles: function () {
+            var _this = this;
+
+            bubble = g.selectAll('.bubble')
+                .data(_bubblesVisible() ? currentData : [], function (d) {return d.geo; });
+
+            bubble
+                .enter().append('circle')
+                .attr('class', 'bubble')
+                .attr('cx', function(d) { return projection([d.lon, d.lat])[0]; })
+                .attr('cy', function(d) { return projection([d.lon, d.lat])[1]; })
+                .on('mouseenter', function (d) {
+                    _this.showData(d);
+                    _this.addHighlight.call(this, d);
+                })
+                .on('mousemove', function (d) {
+                    _this.showTooltip(d);
+                })
+                .on('mouseleave', function (d) {
+                    _this.hideData();
+                    _this.removeHighlight.call(this);
+                    _this.hideTooltip();
                 });
 
             bubble.exit().remove();
@@ -350,76 +487,12 @@ define([
                 .attr('r', function (d) { return _getRadiusScale(d); });
         },
 
-        initializeGeoShapes: function () {
-            // var _this = this,
-            //     worldJSONPath = location.hostname === 'localhost' ? '' : '/u/64730059/gapminder';
-
-            // map.data.loadGeoJson(worldJSONPath + '/data-waffles/bubble-map/en/geo_json_features.json');
-
-            // map.data.addListener('mouseover', function(event) {
-            //     var d = _findD(event.feature.getProperty('name'));
-
-            //     if (d) {
-            //         _this.displayData.call(this, d);
-            //         _this.addGeoTooltip.call(this, d, event);
-            //     }
-
-            //     map.data.overrideStyle(event.feature, {fillOpacity: 1});
-            //  });
-
-            // map.data.addListener('mouseout', function(event) {
-            //     var d = _findD(event.feature.getProperty('name'));
-
-            //     if (d) {
-            //         _this.hideData.call(this, d);
-            //         _this.removeGeoTooltip.call(this, d);
-            //     }
-
-            //     map.data.revertStyle();
-            //  });
-
-            // shapesInitialized = true;
-        },
-
-        styleGeoShapes: function () {
-            if (_shapesVisible()) {
-                map.data.setStyle(function(feature) {
-                    var d = _findD(feature.getProperty('name')),
-                        color = d ? _getColorScale(d) : 'transparent';
-
-                    return {
-                      fillColor: color,
-                      fillOpacity: 0.7,
-                      strokeWeight: 0.5,
-                      strokeColor: '#333'
-                    };
-                });
-            } else {
-                map.data.setStyle(function(feature) {
-                    return {
-                      fillColor: 'transparent',
-                      strokeWeight: 0,
-                      strokeColor: 'transparent'
-                    };
-                });
-            }
-        },
-
-        drawWorld: function (world) {
-            // Draw land
-            g.append("path")
-                .datum(topojson.merge(world, world.objects.countries.geometries))
-                .attr("class", "land")
-                .attr("d", path);
-
-            // Draw countries borders
-            g.append("path")
-                .datum(topojson.mesh(world, world.objects.countries, function(a, b) { return a !== b; }))
-                .attr("class", "boundary")
-                .attr("d", path);
-        },
-
-        drawDistricts: function (geo) {
+        /**
+         * Draw d3 districts on the map
+         * @param  {Object} geo geoJSON data
+         * @return {Void}
+         */
+        drawD3Districts: function (geo) {
             var _this = this;
 
             districts = topojson.feature(geo, geo.objects.districts).features;
@@ -443,46 +516,127 @@ define([
                         color = node ? _getColorScale(node) : '#fff';
                     return color;
                 })
-                // .on("click", function (d) {
-                //   _this.clicked.call(_this, d, this);
-                // })
                 .on('mouseenter', function (d) {
                     var d = _findD(d.properties.name);
 
                     if (d) {
-                        _this.displayData.call(this, d);
+                        _this.showData(d);
+                        // _this.addHighlight.call(this);
                     }
                 })
                 .on('mousemove', function (d) {
                     var d = _findD(d.properties.name);
                     if (d) {
-                        _this.showTooltip.call(this, d);
+                        _this.showTooltip(d);
                     }
                 })
                 .on('mouseleave', function (d) {
-                    _this.hideData.call(this, d);
-                    _this.hideTooltip.call(this, d);
+                    _this.hideData();
+                    _this.hideTooltip();
+                    // _this.removeHighlight.call(this);
                 });
         },
 
-        clicked: function (d, node) {
+        /**
+         * Callback for loading geoJSON data
+         * @param  {Object} error
+         * @param  {Object} geo   GeoJSON data
+         * @return {Void}
+         */
+        geoJSONCallback: function (error, geo) {
+            if (error) return console.log(error);
 
-          if (active.node() === node) return this.resetZoom();
-          active.classed("active", false);
-          active = d3.select(node).classed("active", true);
+            // Cache it for later use
+            geoJSONData = geo;
 
-          this.zoomTo(d, true);
+            this.drawGMapDistricts();
+
+            gmDistrictsInitialized = true;
         },
 
-        resetZoom: function () {
-          active.classed("active", false);
-          active = d3.select(null);
+        /**
+         * Show the name of the feature in the tooltip
+         * @param  {Datum} d Node with the name
+         * @return {Void}
+         */
+        showTooltip: function (d) {
+            var host = svg ? svg.node() : $mapHolder[0],
+                mouse = d3.mouse(host).map( function(d) { return parseInt(d); } );
 
-          svg.transition()
-              .duration(750)
-              .call(zoom.translate([0, 0]).scale(1).event);
+            tooltip
+                .classed('hidden', false)
+                .attr('style', 'left:' + (mouse[0] + 10)+'px; top:' + (mouse[1] + 10) + 'px')
+                .html(d.name || d.properties.name);
         },
 
+        /**
+         * Hide the tooltip with the name
+         * @return {Void}
+         */
+        hideTooltip: function () {
+            tooltip.classed('hidden', true);
+        },
+
+        /**
+         * Highlight the element
+         * @return {Void}
+         */
+        addHighlight: function (d) {
+            d3.select(this).classed('hover', true);
+        },
+
+        /**
+         * Remove highlight from the element
+         * @return {Void}
+         */
+        removeHighlight: function () {
+            d3.select(this).classed('hover', false);
+        },
+
+        /**
+         * Update info box
+         * @param  {Datum} d node with the data
+         * @return {Void}
+         */
+        showData: function (d) {
+            $infoDisplayCounter.text(_getValue(d));
+        },
+
+        /**
+         * Reset info box
+         * @return {Void}
+         */
+        hideData: function () {
+            $infoDisplayCounter.text('');
+        },
+
+        /**
+         * Returns Bounds for currentDisplay data
+         * @param  {Array} locations currentDisplay data
+         * @return {google.maps.LatLngBounds}
+         */
+        getMapBounds: function (locations) {
+            var bounds = new google.maps.LatLngBounds();
+            _.each(locations, function (location) { bounds.extend( new google.maps.LatLng(location.lat, location.lon) ); });
+            return bounds;
+        },
+
+        /**
+         * Returns LatLng center for currentDisplay data
+         * @param  {Array} locations currentDisplay data
+         * @return {google.maps.LatLng}
+         */
+        getMapCenter: function (locations) {
+            var bounds = this.getMapBounds(locations);
+            return bounds.getCenter();
+        },
+
+        /**
+         * Zooms D3 map to fit area of the provided feature
+         * @param  {Datum} d feature
+         * @param  {Boolean} animate wheter zooming should be animated
+         * @return {Void}
+         */
         zoomTo: function (d, animate) {
             var bounds = path.bounds(d),
                 dx = bounds[1][0] - bounds[0][0],
@@ -495,9 +649,37 @@ define([
             svg.transition()
                 .duration(animate ? 750 : 0)
                 .call(zoom.translate(translate).scale(scale).event);
+        },
 
+        /**
+         * Zoom handler for map created with D3
+         * @return {Void}
+         */
+        zoomHandler: function() {
+            var scale = d3.event.scale;
+
+            g.selectAll('.bubble')
+                .attr('r', function (d) { return _getRadiusScale(d) / scale; })
+                .style('stroke-width', function (d) { return 1.5 / scale; })
+            g.style('stroke-width', .5 / scale + 'px');
+            g.attr('transform', 'translate(' + d3.event.translate + ')scale(' + scale + ')');
+        },
+
+        /**
+         * Puts bubbles on the google maps and sizes them accordingly
+         * @param  {Datum} d feature
+         * @return {d3 Selection} transformed d3 selection
+         */
+        transform: function (d) {
+             var pos = new google.maps.LatLng(d.lat, d.lon);
+             pos = projection.fromLatLngToDivPixel(pos);
+
+             return d3.select(this)
+                 .attr('width', function (d) { return (_getRadiusScale(d) + bubbleStrokeWidth) * 2; })
+                 .attr('height', function (d) { return (_getRadiusScale(d) + bubbleStrokeWidth) * 2; })
+                 .style('left', function (d) { return (pos.x - _getRadiusScale(d) + bubbleStrokeWidth * 2) + 'px'; })
+                 .style('top', function (d) { return (pos.y - _getRadiusScale(d) + bubbleStrokeWidth * 2) + 'px'; });
         }
-
     });
 
     return BubbleMap;

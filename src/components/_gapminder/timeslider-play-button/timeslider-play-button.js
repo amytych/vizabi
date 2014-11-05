@@ -83,7 +83,6 @@ define([
                     _this.pause();
                     return;
                 } else {
-                    console.log(yearValue);
                     _this.model.setState({
                         time: yearValue++
                     });

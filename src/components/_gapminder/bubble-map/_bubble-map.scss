@@ -17,17 +17,32 @@ $clrMarkerHover: darken($clrMarker, 20%);
 }
 
 .district {
-    stroke: #eee;
-    fill-opacity: .5
+    stroke: rgba(0,0,0,.5);
+    stroke-opacity: .5;
+    fill-opacity: .5;
 }
 
 .district.hover {
   fill-opacity: 1;
 }
 
+.gm-district {
+  position: absolute;
+}
+
+.geoshapes-overlay {
+  svg {
+    position: absolute;
+    top: -4000px;
+    left: -4000px;
+    width: 8000px;
+    height: 8000px;
+  }
+}
+
 .boundary {
   fill: none;
-  stroke: #eee;
+  stroke: rgba(0,0,0,.7);
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -56,21 +71,20 @@ $clrMarkerHover: darken($clrMarker, 20%);
   padding: 0;
   cursor: default;
 
-    .bubble, .bubble svg {
+    .bubble-holder, .bubble {
       position: absolute;
     }
 
-    .bubble circle {
+    .bubble {
+      cursor: default;
       // fill: $clrMarker;
       stroke: $clrMarkerStroke;
       stroke-width: 1.5px;
     }
 
     .hover {
-        position: relative;
         z-index: 5;
-        fill: $clrMarkerHover;
-        stroke: $clrMarkerHover;
+        stroke: #fff;
     }
 
     .inner {
