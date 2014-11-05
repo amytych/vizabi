@@ -2,7 +2,7 @@
 
 define([
     'jquery',
-    'underscore',
+    'lodash',
     'base/utils',
     'base/component'
 ], function($, _, utils, Component) {
@@ -10,23 +10,17 @@ define([
     var geo_picker;
 
     var ButtonList = Component.extend({
-        init: function(core, options) {
+        init: function(options, context) {
             //set properties
             this.name = 'buttonlist';
             this.template = "components/_gapminder/" + this.name + "/" + this.name;
-            //list of buttons to be rendered
-            this.template_data = {
-                buttons: options.buttons
-            } || {
-                buttons: []
-            };
 
-            //add sub components
-            this.addComponent('_gapminder/picker-geo', {
-                data: options.data
-            });
+            // //add sub components
+            // this.addComponent('_gapminder/picker-geo', {
+            //     data: options.data
+            // });
 
-            this._super(core, options);
+            this._super(options, context);
 
         },
 
@@ -37,7 +31,7 @@ define([
             geo_picker = this.components['picker-geo'];
 
             //show the picker when the correct button is pressed
-            var geo_button = this.placeholder.find('#geo');
+            var geo_button = this.placeholder.find('.vzb-buttonlist-geo');
             geo_button.click(function() {
                 geo_picker.show();
             });
@@ -45,8 +39,8 @@ define([
 
         //make button list responsive
         resize: function() {
-            var $buttons = this.placeholder.find('#buttonlist .button'),
-                $button_more = this.placeholder.find('#buttonlist #button-more'),
+            var $buttons = this.placeholder.find('.vzb-buttonlist .vzb-buttonlist-btn'),
+                $button_more = this.placeholder.find('.vzb-buttonlist .vzb-buttonlist-btn-more'),
                 offset = 30;
 
             var size_button = {
@@ -65,18 +59,18 @@ define([
             offset = size_button[compare] / 2;
 
             if ((number_buttons * size_button[compare]) <= size_container[compare] - offset) {
-                $buttons.removeClass('hidden');
-                $button_more.addClass('hidden');
+                $buttons.removeClass('vzb-hidden');
+                $button_more.addClass('vzb-hidden');
             } else {
                 var max = Math.floor((size_container[compare] - offset) / size_button[compare]) - 1,
                     i = 0;
-                $buttons.addClass('hidden');
+                $buttons.addClass('vzb-hidden');
                 $buttons.each(function() {
                     i++;
-                    $(this).removeClass('hidden');
+                    $(this).removeClass('vzb-hidden');
                     if (i >= max) return false;
                 });
-                $button_more.removeClass('hidden');
+                $button_more.removeClass('vzb-hidden');
             }
         }
 

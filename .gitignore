@@ -1,4 +1,11 @@
+.deploy-keys.json
 .sass-cache/
 lib/
 node_modules/
 .DS_Store
+dist/
+*.swp
+/preview_pages/assets/_preview.tpl
+/src/plugins.js
+/src/assets/style/vizabi.scss
+>>>>>>> develop

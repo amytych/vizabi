@@ -7,12 +7,15 @@ require.config({
         base: 'base',
         tools: 'tools',
         components: 'components',
-        readers: 'data-reader',
+        models: 'models',
+        readers: 'readers',
 
         d3: '../lib/d3/d3',
         topojson: '../lib/topojson/topojson',
         jquery: '../lib/jquery/dist/jquery',
         underscore: '../lib/underscore/underscore',
+        //todo: replace underscore with lodash
+        lodash: '../lib/lodash/dist/lodash',
 
         text: '../lib/requirejs-text/text',
         smartpicker: '../lib/smart-picker/dist/smart-picker',
@@ -32,7 +35,7 @@ require.config({
             exports: 'd3'
         },
         smartpicker: {
-            deps: ['underscore', 'jquery'],
+            deps: ['lodash', 'jquery'],
             exports: 'smartpicker'
         },
         jqueryui_core: {
