@@ -105,9 +105,9 @@ define([
             // it's just for the testing phase, to be removed in the final code
             currentRender = renderType;
 
-            $mapHolder = $('#bubble-map-holder');
-            $infoDisplayCounter = $('#bubble-map-info-display-counter');
-            tooltip = d3.select('.bubble-map-tooltip');
+            $mapHolder = $('#vzb-bm-holder');
+            $infoDisplayCounter = $('#vzb-bm-info-counter');
+            tooltip = d3.select('#vzb-bm-tooltip');
 
             width = $mapHolder.width();
             height = $mapHolder.height();
@@ -179,7 +179,7 @@ define([
             var _this = this;
 
             // Create the Google Map…
-            map = new google.maps.Map(document.getElementById('bubble-map-holder'), {
+            map = new google.maps.Map($mapHolder[0], {
                 zoom: 6,
                 center: _this.getMapCenter(currentData),
                 mapTypeId: google.maps.MapTypeId.TERRAIN,
@@ -200,12 +200,12 @@ define([
             overlay.onAdd = function () {
                 // Geo Shapes
                 gmDistrictLayer = d3.select(this.getPanes().overlayMouseTarget).append('div')
-                    .attr('class', 'geoshapes-overlay');
+                    .attr('class', 'vzb-bm-geoshape-overlay');
                 gmDistrictSVG = gmDistrictLayer.append('svg:svg');
 
                 // Bubbles
                 gmBubbleLayer = d3.select(this.getPanes().overlayMouseTarget).append('div')
-                    .attr('class', 'bubbles-overlay');
+                    .attr('class', 'vzb-bm-bubble-overlay');
 
                 overlay.draw = function () {
                     projection = this.getProjection();
@@ -260,18 +260,18 @@ define([
         drawGMapBubbles: function () {
             var _this = this;
 
-            bubble = gmBubbleLayer.selectAll('.bubble-holder')
+            bubble = gmBubbleLayer.selectAll('.vzb-bm-bubble-holder')
                 .data(_bubblesVisible() ? currentData : [], function (d) { return d.geo; });
 
             // Create new bubbles
             bubbleEnter = bubble
                 .enter().append('svg:svg')
-                .attr('class', 'bubble-holder');
+                .attr('class', 'vzb-bm-bubble-holder');
 
             // Add a circle.
             bubbleEnter
                 .append('svg:circle')
-                .attr('class', 'bubble')
+                .attr('class', 'vzb-bm-bubble')
                 .on('mouseenter', function (d) {
                     _this.showData(d);
                     _this.addHighlight.call(this, d);
@@ -317,13 +317,13 @@ define([
                 districts = _.filter(districts, function (district) { return _findD(district.properties.name); });
             }
 
-            gmDistrict = gmDistrictSVG.selectAll('.district')
-                .data(districts, function (d) { return 'district-' + d.properties.name; });
+            gmDistrict = gmDistrictSVG.selectAll('.vzb-bm-district')
+                .data(districts, function (d) { return 'vzb-bm-district-' + d.properties.name; });
 
             // Create new districts
             gmDistrict
                 .enter().append('svg:path')
-                .attr('class', 'district')
+                .attr('class', 'vzb-bm-district')
                 .on('mouseenter', function (d) {
                     var d = _findD(d.properties.name);
                     if (d) {
@@ -377,12 +377,12 @@ define([
             path = d3.geo.path()
                 .projection(projection);
 
-            svg = d3.select('#bubble-map-holder').append('svg')
+            svg = d3.select('#vzb-bm-holder').append('svg')
                 .attr('width', width)
                 .attr('height', height);
 
             overlay = svg.append('rect')
-                  .attr('class', 'background')
+                  .attr('class', 'vzb-bm-background')
                   .attr('width', width)
                   .attr('height', height)
                   .on('click', _this.reset);
@@ -411,6 +411,8 @@ define([
                     _this.update();
                 });
             });
+
+            _this.initializeZoomButtons();
         },
 
         /**
@@ -419,7 +421,7 @@ define([
          */
         updateD3Map: function () {
             // Udpdate the disctirct colors
-            g.selectAll('.district')
+            g.selectAll('.vzb-bm-district')
                 .data(districts, function (d) {return d.properties.name; })
                 .style('fill', function(d, i) {
                     var node = _findD(d.properties.name);
@@ -442,13 +444,13 @@ define([
             // Draw land
             g.append('path')
                 .datum(topojson.merge(world, world.objects.countries.geometries))
-                .attr('class', 'land')
+                .attr('class', 'vzb-bm-land')
                 .attr('d', path);
 
             // Draw countries borders
             g.append('path')
                 .datum(topojson.mesh(world, world.objects.countries, function(a, b) { return a !== b; }))
-                .attr('class', 'boundary')
+                .attr('class', 'vzb-bm-boundary')
                 .attr('d', path);
         },
 
@@ -459,12 +461,12 @@ define([
         drawD3Bubbles: function () {
             var _this = this;
 
-            bubble = g.selectAll('.bubble')
+            bubble = g.selectAll('.vzb-bm-bubble')
                 .data(_bubblesVisible() ? currentData : [], function (d) {return d.geo; });
 
             bubble
                 .enter().append('circle')
-                .attr('class', 'bubble')
+                .attr('class', 'vzb-bm-bubble')
                 .attr('cx', function(d) { return projection([d.lon, d.lat])[0]; })
                 .attr('cy', function(d) { return projection([d.lon, d.lat])[1]; })
                 .on('mouseenter', function (d) {
@@ -500,16 +502,16 @@ define([
             // draw the (hidden) combined area of all districts…
             g.append('path')
                 .datum(topojson.merge(geo, geo.objects.districts.geometries))
-                .attr('class', 'area')
+                .attr('class', 'vzb-bm-area')
                 .attr('d', path);
 
             // and zoom to it all
-            _this.zoomTo(d3.select('.area').data()[0]);
+            _this.zoomTo(d3.select('.vzb-bm-area').data()[0]);
 
-            g.selectAll('.district')
+            g.selectAll('.vzb-bm-district')
                 .data(districts, function (d) { return d.properties.name; })
             .enter().append('path')
-                .attr('class', 'district')
+                .attr('class', 'vzb-bm-district')
                 .attr('d', path)
                 .style('fill', function(d, i) {
                     var node = _findD(d.properties.name),
@@ -564,7 +566,7 @@ define([
                 mouse = d3.mouse(host).map( function(d) { return parseInt(d); } );
 
             tooltip
-                .classed('hidden', false)
+                .classed('vzb-bm-hidden', false)
                 .attr('style', 'left:' + (mouse[0] + 10)+'px; top:' + (mouse[1] + 10) + 'px')
                 .html(d.name || d.properties.name);
         },
@@ -574,7 +576,7 @@ define([
          * @return {Void}
          */
         hideTooltip: function () {
-            tooltip.classed('hidden', true);
+            tooltip.classed('vzb-bm-hidden', true);
         },
 
         /**
@@ -582,7 +584,7 @@ define([
          * @return {Void}
          */
         addHighlight: function (d) {
-            d3.select(this).classed('hover', true);
+            d3.select(this).classed('vzb-bm-hover', true);
         },
 
         /**
@@ -590,7 +592,7 @@ define([
          * @return {Void}
          */
         removeHighlight: function () {
-            d3.select(this).classed('hover', false);
+            d3.select(this).classed('vzb-bm-hover', false);
         },
 
         /**
@@ -658,7 +660,7 @@ define([
         zoomHandler: function() {
             var scale = d3.event.scale;
 
-            g.selectAll('.bubble')
+            g.selectAll('.vzb-bm-bubble')
                 .attr('r', function (d) { return _getRadiusScale(d) / scale; })
                 .style('stroke-width', function (d) { return 1.5 / scale; })
             g.style('stroke-width', .5 / scale + 'px');
@@ -679,6 +681,42 @@ define([
                  .attr('height', function (d) { return (_getRadiusScale(d) + bubbleStrokeWidth) * 2; })
                  .style('left', function (d) { return (pos.x - _getRadiusScale(d) + bubbleStrokeWidth * 2) + 'px'; })
                  .style('top', function (d) { return (pos.y - _getRadiusScale(d) + bubbleStrokeWidth * 2) + 'px'; });
+        },
+
+        initializeZoomButtons: function () {
+            var _this = this,
+                $zoomIn = $('<a/>', {'href': '#', 'class': 'vzb-bm-zoom-in', 'text': '+'}),
+                $zoomOut = $('<a/>', {'href': '#', 'class': 'vzb-bm-zoom-out', 'text': '–'});
+
+                $zoomIn.on('click', _this.clickZoomHandler);
+                $zoomOut.on('click', _this.clickZoomHandler);
+
+                $mapHolder
+                    .append($zoomIn)
+                    .append($zoomOut);
+        },
+
+        clickZoomHandler: function (event) {
+            event.preventDefault();
+            var factor = $(this).hasClass('vzb-bm-zoom-in') ? 1.4 : 0.6,
+                scale = zoom.scale(),
+                newScale = scale * factor,
+                extent = zoom.scaleExtent(),
+                center, translate, newTranslate;
+
+            if (extent[0] <= newScale && newScale <= extent[1]) {
+                translate = zoom.translate();
+                center = [width / 2, height / 2];
+                newTranslate = [
+                    center[0] + (translate[0] - center[0]) / scale * newScale,
+                    center[1] + (translate[1] - center[1]) / scale * newScale
+                ];
+
+                zoom
+                    .scale(newScale)
+                    .translate(newTranslate)
+                    .event(svg.transition().duration(350));
+            }
         }
     });
 

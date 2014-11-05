@@ -2,35 +2,41 @@ $clrMarker: #f84e67;
 $clrMarkerStroke: darken($clrMarker, 50%);
 $clrMarkerHover: darken($clrMarker, 20%);
 
-.background {
-  fill: #aef3fa;
+.vzb-bm-background {
+  fill: #aacafd;
   pointer-events: all;
 }
 
-.area {
+.vzb-bm-land {
+  fill: #d1f7c7;
+}
+
+.vzb-bm-boundary {
+  fill: none;
+  stroke: rgba(0,0,0,.7);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.vzb-bm-area {
     fill: transparent;
 }
 
-.land {
-  fill: #fff;
-  cursor: pointer;
-}
-
-.district {
+.vzb-bm-district {
     stroke: rgba(0,0,0,.5);
     stroke-opacity: .5;
     fill-opacity: .5;
 }
 
-.district.hover {
+.vzb-bm-district.vzb-bm-hover {
   fill-opacity: 1;
 }
 
-.gm-district {
+.vzb-bm-gm-district {
   position: absolute;
 }
 
-.geoshapes-overlay {
+.vzb-bm-geoshape-overlay {
   svg {
     position: absolute;
     top: -4000px;
@@ -40,15 +46,7 @@ $clrMarkerHover: darken($clrMarker, 20%);
   }
 }
 
-.boundary {
-  fill: none;
-  stroke: rgba(0,0,0,.7);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-//general styles
-#bubble-map-info-display {
+.vzb-bm-info {
     position: absolute;
     right: 0;
     top: 0;
@@ -58,46 +56,46 @@ $clrMarkerHover: darken($clrMarker, 20%);
     font-weight: bold;
 }
 
-.bubble-map-info-display-title {
+.vzb-bm-info-title {
     margin: 3px 0;
     font-size: 12px;
     font-weight: 400;
 }
 
-#bubble-map-holder {
+.vzb-bm-holder {
   width: 100%;
   height: 100%;
   margin: 0;
   padding: 0;
   cursor: default;
-
-    .bubble-holder, .bubble {
-      position: absolute;
-    }
-
-    .bubble {
-      cursor: default;
-      // fill: $clrMarker;
-      stroke: $clrMarkerStroke;
-      stroke-width: 1.5px;
-    }
-
-    .hover {
-        z-index: 5;
-        stroke: #fff;
-    }
-
-    .inner {
-        fill: $clrMarkerHover;
-        stroke-width: 0;
-    }
-
-    .inner1 {
-        fill: white;
-    }
 }
 
-.bubble-map-tooltip {
+.vzb-bm-bubble-holder, .vzb-bm-bubble {
+  position: absolute;
+}
+
+.vzb-bm-bubble {
+  cursor: default;
+  // fill: $clrMarker;
+  stroke: $clrMarkerStroke;
+  stroke-width: 1.5px;
+}
+
+.vzb-bm-hover {
+    z-index: 5;
+    stroke: #fff;
+}
+
+.vzb-bm-inner {
+    fill: $clrMarkerHover;
+    stroke-width: 0;
+}
+
+.vzb-bm-inner1 {
+    fill: white;
+}
+
+.vzb-bm-tooltip {
     position: absolute;
     z-index: 99999;
     background-color: #129dd5;
@@ -106,29 +104,50 @@ $clrMarkerHover: darken($clrMarker, 20%);
     color: #fff;
     padding: 5px;
 
-    &.hidden {
+    &.vzb-bm-hidden {
         display: none;
     }
+}
+
+.vzb-bm-zoom-in, .vzb-bm-zoom-out {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  width: 17px;
+  height: 17px;
+  background: #fff;
+  border: 1px solid;
+  line-height: 17px;
+  font-size: 14px;
+  border-radius: 2px 2px 0 0;
+  color: #666;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.vzb-bm-zoom-out {
+  top: 28px;
+  border-radius: 0 0 2px 2px;
 }
 
 
 //large specific styles
 &.large {
-    #bubble-map-holder {
+    .vzb-bm-holder {
      	//...
     }
 }
 
 //medium specific styles
 &.medium {
-    #bubble-map-holder {
+    .vzb-bm-holder {
         //...
     }
 }
 
 //small specific styles
 &.small {
-    #bubble-map-holder {
+    .vzb-bm-holder {
         //...
     }
 }
