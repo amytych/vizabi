@@ -685,20 +685,16 @@ define([
 
         initializeZoomButtons: function () {
             var _this = this,
-                $zoomIn = $('<a/>', {'href': '#', 'class': 'vzb-bm-zoom-in', 'text': '+'}),
-                $zoomOut = $('<a/>', {'href': '#', 'class': 'vzb-bm-zoom-out', 'text': '–'});
+                $zoomIn = $('#vzb-bm-zoom-in'),
+                $zoomOut = $('#vzb-bm-zoom-out');
 
                 $zoomIn.on('click', _this.clickZoomHandler);
                 $zoomOut.on('click', _this.clickZoomHandler);
-
-                $mapHolder
-                    .append($zoomIn)
-                    .append($zoomOut);
         },
 
         clickZoomHandler: function (event) {
             event.preventDefault();
-            var factor = $(this).hasClass('vzb-bm-zoom-in') ? 1.4 : 0.6,
+            var factor = this.id === 'vzb-bm-zoom-in' ? 1.4 : 0.6,
                 scale = zoom.scale(),
                 newScale = scale * factor,
                 extent = zoom.scaleExtent(),

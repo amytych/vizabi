@@ -109,24 +109,27 @@ $clrMarkerHover: darken($clrMarker, 20%);
     }
 }
 
-.vzb-bm-zoom-in, .vzb-bm-zoom-out {
+.vzb-bm-zoom {
   position: absolute;
-  left: 10px;
-  top: 10px;
+  left: 5px;
   width: 17px;
   height: 17px;
   background: #fff;
   border: 1px solid;
   line-height: 17px;
   font-size: 14px;
-  border-radius: 2px 2px 0 0;
   color: #666;
   font-weight: bold;
   text-decoration: none;
 }
 
+.vzb-bm-zoom-in {
+  top: 7px;
+  border-radius: 2px 2px 0 0;
+}
+
 .vzb-bm-zoom-out {
-  top: 28px;
+  top: 25px;
   border-radius: 0 0 2px 2px;
 }
 
