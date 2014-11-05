@@ -72,14 +72,20 @@ $(function() {
         //state
         state: url.state || {
             show: {
-                geo: ['*']
+                geo: ['*'],
+                indicator: 'ebola_cases_total',
+                scale: 'linear',
+                visuals: ['bubble', 'shape'],
+                render: 'online'
             },
-            timeRange: ["0-86"],
-            time: 76,
-            indicator: 'ebola_cases_total',
-            scale: 'linear',
-            visuals: ['bubble', 'shape'],
-            render: 'offline'
+            //time properties
+            time: {
+                start: 0,
+                end: 86,
+                step: 1,
+                speed: 100,
+                value: 76
+            }
         },
         //path
         data: {
@@ -87,13 +93,15 @@ $(function() {
             path: '../../data-waffles/bubble-map/{{LANGUAGE}}/response.json'
         },
 
-        //language
-        language: url.lang || "en",
-        ui_strings: {
-            en: {
-                "title": "Bubble Map",
-                "timeslider/play": "Play",
-                "timeslider/pause": "Pause"
+        //language properties
+        language: url.lang || {
+            id: "en",
+            strings: {
+                en: {
+                    "title": "Bubble Map",
+                    "timeslider/play": "Play",
+                    "timeslider/pause": "Pause"
+                }
             }
         },
 
@@ -111,6 +119,7 @@ $(function() {
         }
     };
 
+    showState(options.state);
     myVizabi = new Vizabi("_gapminder/bubble-map", "#bubble-map", options);
 
 });

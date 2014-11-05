@@ -34,6 +34,7 @@ $clrMarkerHover: darken($clrMarker, 20%);
 
 .vzb-bm-gm-district {
   position: absolute;
+  cursor: default;
 }
 
 .vzb-bm-geoshape-overlay {
@@ -54,6 +55,7 @@ $clrMarkerHover: darken($clrMarker, 20%);
     height: 40px;
     background: rgba(255,255,255,.9);
     font-weight: bold;
+    text-align: center;
 }
 
 .vzb-bm-info-title {
@@ -103,10 +105,6 @@ $clrMarkerHover: darken($clrMarker, 20%);
     font-size: 11px;
     color: #fff;
     padding: 5px;
-
-    &.vzb-bm-hidden {
-        display: none;
-    }
 }
 
 .vzb-bm-zoom {
@@ -121,6 +119,7 @@ $clrMarkerHover: darken($clrMarker, 20%);
   color: #666;
   font-weight: bold;
   text-decoration: none;
+  text-align: center;
 }
 
 .vzb-bm-zoom-in {

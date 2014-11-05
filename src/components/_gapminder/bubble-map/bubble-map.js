@@ -3,7 +3,7 @@ define([
     'jquery',
     'd3',
     'topojson',
-    'underscore',
+    'lodash',
     'base/component'
 ], function($, d3, topojson, _, Component) {
 
@@ -11,7 +11,8 @@ define([
         $mapHolder, $infoDisplayCounter,
         projection, zoom, path, svg, g, overlay, tooltip,
         gmBubbleLayer, bubble, bubbleEnter,
-        geoJSONData, gmDistrictSVG, gmDistrictLayer, gmDistrict,
+        geoJSONData, districts, gmDistrictSVG, gmDistrictLayer, gmDistrict,
+        d3MapInitialized,
         gmInitialized, gmOverlayInitialized, gmDistrictsInitialized, gmBubblesInitialized,
         data, currentData, indicator, time, radiusScale, colorScale, visuals, geoJSONPath, currentRender,
         radiusScaleRange = [3, 15], colorScaleRange = ['#7fb5f5', '#d70927'], bubbleStrokeWidth = 1.5;
@@ -88,13 +89,13 @@ define([
             geoJSONPath = location.hostname === 'localhost' ? '' : '/u/64730059/gapminder';
             geoJSONPath += '/data-waffles/bubble-map/en/topo_json_features.json';
 
-            time        = this.model.getState('time');
-            indicator   = this.model.getState('indicator');
-            visuals     = this.model.getState('visuals');
-            panValue    = this.model.getState('pan') || [-8.3, 9];
-            zoomValue   = this.model.getState('zoom') || 1;
-            renderType  = this.model.getState('render') || 'online';
-            data        = this.model.getData()[0];
+            time        = this.model.time.value;
+            indicator   = this.model.show.indicator;
+            visuals     = this.model.show.visuals;
+            panValue    = this.model.show.pan || [-8.3, 9];
+            zoomValue   = this.model.show.zoom || 1;
+            renderType  = this.model.show.render || 'online';
+            data        = _.cloneDeep(this.model.data.getItems());
             currentData = data.filter(function(row) { return (row.time == time); });
             min         = d3.min(data, function(d) { return _getValue(d); });
             max         = d3.max(data, function(d) { return _getValue(d); });
@@ -127,13 +128,13 @@ define([
         update: function() {
             var _this = this;
 
-            time        = this.model.getState('time');
-            indicator   = this.model.getState('indicator');
-            visuals     = this.model.getState('visuals');
-            panValue    = this.model.getState('pan') || [-8.3, 9];
-            zoomValue   = this.model.getState('zoom') || 1;
-            renderType  = this.model.getState('render') || 'online';
-            data        = this.model.getData()[0];
+            time        = this.model.time.value;
+            indicator   = this.model.show.indicator;
+            visuals     = this.model.show.visuals;
+            panValue    = this.model.show.pan || [-8.3, 9];
+            zoomValue   = this.model.show.zoom || 1;
+            renderType  = this.model.show.render || 'online';
+            data        = _.cloneDeep(this.model.data.getItems());
             currentData = data.filter(function(row) { return (row.time == time); });
             min         = d3.min(data, function(d) { return _getValue(d); });
             max         = d3.max(data, function(d) { return _getValue(d); });
@@ -408,6 +409,8 @@ define([
                     // Put all the districts on the map
                     _this.drawD3Districts(geo);
 
+                    d3MapInitialized = true;
+
                     _this.update();
                 });
             });
@@ -420,19 +423,21 @@ define([
          * @return {Void}
          */
         updateD3Map: function () {
-            // Udpdate the disctirct colors
-            g.selectAll('.vzb-bm-district')
-                .data(districts, function (d) {return d.properties.name; })
-                .style('fill', function(d, i) {
-                    var node = _findD(d.properties.name);
-                    return node ? _getColorScale(node) : '#fff';
-                });
+            if (d3MapInitialized) {
+                // Udpdate the disctirct colors
+                g.selectAll('.vzb-bm-district')
+                    .data(districts, function (d) {return d.properties.name; })
+                    .style('fill', function(d, i) {
+                        var node = _findD(d.properties.name);
+                        return node ? _getColorScale(node) : '#fff';
+                    });
 
-            // Update bubbles
-            this.drawD3Bubbles();
+                // Update bubbles
+                this.drawD3Bubbles();
 
-            // Update scaling
-            svg.call(zoom.event);
+                // Update scaling
+                svg.call(zoom.event);
+            }
         },
 
         /**
@@ -566,7 +571,7 @@ define([
                 mouse = d3.mouse(host).map( function(d) { return parseInt(d); } );
 
             tooltip
-                .classed('vzb-bm-hidden', false)
+                .classed('vzb-hidden', false)
                 .attr('style', 'left:' + (mouse[0] + 10)+'px; top:' + (mouse[1] + 10) + 'px')
                 .html(d.name || d.properties.name);
         },
@@ -576,7 +581,7 @@ define([
          * @return {Void}
          */
         hideTooltip: function () {
-            tooltip.classed('vzb-bm-hidden', true);
+            tooltip.classed('vzb-hidden', true);
         },
 
         /**

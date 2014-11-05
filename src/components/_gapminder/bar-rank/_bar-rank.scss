@@ -2,7 +2,7 @@
     @include absolute(0, 0, 0, 0);
     @include font-size(18px);
     padding-top: 50px;
-    font-family: $fontFamily;
+    font-family: $vzb-font-family;
     color: #666;
 
     #vzb-bar-rank-chart-holder {
@@ -44,7 +44,7 @@
     }
 
     .title {
-        color: $colorIMmediumBlue;
+        color: $vzb-color-primary;
         fill: currentColor;
     }
 
@@ -56,24 +56,24 @@
         }
 
         .vzb-bar-rank-item-bg, .vzb-bar-rank-item-bar-bg {
-            fill: $colorWhite;
+            fill: $vzb-color-white;
         }
 
         .vzb-bar-rank-item-bar {
-            fill: $colorGreen;
+            fill: $vzb-color-green;
             stroke: none;
         }
 
         &:nth-child(2n) .vzb-bar-rank-item-bar {
-            fill: $colorRed;
+            fill: $vzb-color-red;
         }
         &:nth-child(3n) .vzb-bar-rank-item-bar {
-            fill: $colorBlue;
+            fill: $vzb-color-blue;
         }
     }
 
     .vzb-bar-rank-item-value {
-        fill: $colorGrey;
+        fill: $vzb-color-grey;
     }
 }
 

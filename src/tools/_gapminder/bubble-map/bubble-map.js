@@ -4,7 +4,7 @@ define([
 ], function(Tool) {
 
     var BubbleMap = Tool.extend({
-        init: function(parent, options) {
+        init: function(config, options) {
 
             this.name = 'bubble-map';
             this.template = "tools/_gapminder/bubble-map/bubble-map";
@@ -13,37 +13,35 @@ define([
             this.state = options.state;
 
 	        //add components
-
-            this.addComponent('_gapminder/bubble-map', {
-                placeholder: '.vizabi-tool-viz'
-            });
-
-            this.addComponent('_gapminder/header', {
-                placeholder: '.vizabi-tool-title'
-            });
-
-            this.addComponent('_gapminder/timeslider', {
-                placeholder: '.vizabi-tool-timeslider'
-            });
-
-            this.addComponent('_gapminder/buttonlist', {
-                placeholder: '.vizabi-tool-buttonlist',
+            this.components = [{
+                component: '_gapminder/bubble-map',
+                placeholder: '.vzb-tool-viz',
+                model: ['state.show', 'data', 'state.time']
+            }, {
+                component: '_gapminder/header',
+                placeholder: '.vzb-tool-title'
+            }, {
+                component: '_gapminder/timeslider',
+                placeholder: '.vzb-tool-timeslider'
+            }, {
+                component: '_gapminder/buttonlist',
+                placeholder: '.vzb-tool-buttonlist',
                 buttons: [{
-                            id: "geo",
-                            title: "Country",
-                            icon: "globe",
-
-                        }],
+                    id: "geo",
+                    title: "Country",
+                    icon: "globe",
+                }],
                 data: options.data
-            });
+            }]
 
 
-            this._super(parent, options);
+            this._super(config, options);
         },
 
         //TODO: Check mapping options
 
-        getQuery: function() {
+        getQuery: function(model) {
+            var state = model.state;
             //build query with state info
             var query = [{
                     select: [
@@ -51,12 +49,12 @@ define([
                         'time',
                         'geo.name',
                         'geo.category',
-                        this.model.getState("indicator")
+                        state.indicator
                     ],
                     where: {
-                        geo: this.model.getState("show").geo,
-                        'geo.category': this.model.getState("show")['geo.category'],
-                        time: this.model.getState("timeRange")
+                        geo: state.show.geo,
+                        'geo.category': state.show['geo.category'],
+                        time: state.timeRange
                     }}];
 
             return query;
