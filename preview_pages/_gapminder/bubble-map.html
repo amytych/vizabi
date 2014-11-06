@@ -106,11 +106,11 @@ $(function() {
         },
 
         bind: {
-            'change:state': function(state) {
-                showState(state);
+            'ready': function() {
+                parseURL();
             },
-            'change:query': function(query) {
-                showQuery(query);
+            'change:state': function(evt, vals) {
+                showState(vals.state);
             }
         },
 

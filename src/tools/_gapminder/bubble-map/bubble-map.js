@@ -22,7 +22,8 @@ define([
                 placeholder: '.vzb-tool-title'
             }, {
                 component: '_gapminder/timeslider',
-                placeholder: '.vzb-tool-timeslider'
+                placeholder: '.vzb-tool-timeslider',
+                model: ['state.time']
             }, {
                 component: '_gapminder/buttonlist',
                 placeholder: '.vzb-tool-buttonlist',
