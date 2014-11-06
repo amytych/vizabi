@@ -2,7 +2,6 @@
 .sass-cache/
 lib/
 node_modules/
-.DS_Store
 dist/
 *.swp
 /preview_pages/assets/_preview.tpl

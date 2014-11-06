@@ -8,9 +8,6 @@ define([
 
             this.name = 'bubble-map';
             this.template = "tools/_gapminder/bubble-map/bubble-map";
-            this.placeholder = options.placeholder;
-
-            this.state = options.state;
 
 	        //add components
             this.components = [{
@@ -26,13 +23,7 @@ define([
                 model: ['state.time']
             }, {
                 component: '_gapminder/buttonlist',
-                placeholder: '.vzb-tool-buttonlist',
-                buttons: [{
-                    id: "geo",
-                    title: "Country",
-                    icon: "globe",
-                }],
-                data: options.data
+                placeholder: '.vzb-tool-buttonlist'
             }]
 
 

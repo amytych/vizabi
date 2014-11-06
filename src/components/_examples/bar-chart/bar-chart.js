@@ -1,4 +1,4 @@
-//TODO: Rename postrender & resize 
+//TODO: Rename postrender & resize
 define([
     'd3',
     'lodash',
@@ -68,7 +68,7 @@ define([
                     return d;
                 });
 
-            
+
             this.y = (scale == "log") ? d3.scale.log() : d3.scale.linear();
             this.y.domain([minY, maxY])
                 .range([this.height, 0]);
@@ -167,7 +167,7 @@ define([
 
             var indicator = this.model.show.indicator;
 
-            // Update size of this.bars 
+            // Update size of this.bars
             var _this = this;
             this.bars.selectAll(".vzb-bc-bar")
                 .attr("d", function(d, i) {

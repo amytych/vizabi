@@ -17,7 +17,6 @@ define([
         data, currentData, indicator, time, radiusScale, colorScale, visuals, geoJSONPath, currentRender,
         radiusScaleRange = [3, 15], colorScaleRange = ['#7fb5f5', '#d70927'], bubbleStrokeWidth = 1.5;
 
-
     // Some handy helpers and getters
 
     // Find the node in waffle data (currentData)
@@ -181,12 +180,14 @@ define([
 
             // Create the Google Map…
             map = new google.maps.Map($mapHolder[0], {
-                zoom: 6,
-                center: _this.getMapCenter(currentData),
+                // zoom: 6,
+                // center: _this.getMapCenter(currentData),
                 mapTypeId: google.maps.MapTypeId.TERRAIN,
                 mapTypeControl: false,
                 streetViewControl: false
             });
+
+            map.fitBounds(_this.getMapBounds(currentData));
 
             gmInitialized = true;
 
