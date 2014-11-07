@@ -2,11 +2,6 @@ $clrMarker: #f84e67;
 $clrMarkerStroke: darken($clrMarker, 50%);
 $clrMarkerHover: darken($clrMarker, 20%);
 
-.vzb-bm-background {
-  fill: #aacafd;
-  pointer-events: all;
-}
-
 .vzb-bm-land {
   fill: #d1f7c7;
 }
@@ -38,13 +33,11 @@ $clrMarkerHover: darken($clrMarker, 20%);
 }
 
 .vzb-bm-geoshape-overlay {
-  svg {
-    position: absolute;
-    top: -4000px;
-    left: -4000px;
-    width: 8000px;
-    height: 8000px;
-  }
+  position: absolute;
+  top: -4000px;
+  left: -4000px;
+  width: 8000px;
+  height: 8000px;
 }
 
 .vzb-bm-info {
@@ -70,6 +63,7 @@ $clrMarkerHover: darken($clrMarker, 20%);
   margin: 0;
   padding: 0;
   cursor: default;
+  background-color: #aacafd;
 }
 
 .vzb-bm-bubble-holder, .vzb-bm-bubble {
