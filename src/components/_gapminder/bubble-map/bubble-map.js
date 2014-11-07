@@ -222,7 +222,7 @@ define([
                         if (!gmDistrictsInitialized) {
                             d3.json(geoJSONPath, _this.geoJSONCallback.bind(_this));
                         } else {
-                            _this.drawGMapDistricts();
+                            _this.drawDistricts();
                         }
                     }
 
@@ -245,14 +245,14 @@ define([
                 _this.initializeGMapOverlay();
             }
 
-            // gmDistrictLayer is assigned upon initialization, this.drawGMapDistricts() is also called then
+            // svgLayer is assigned upon initialization, this.drawGMapDistricts() is also called then
             // no need to do it twice
-            if (gmDistrictLayer) {
+            if (svgLayer) {
                 // Make sure that district JSON is loaded
                 if (!gmDistrictsInitialized) {
                     d3.json(geoJSONPath, _this.geoJSONCallback.bind(_this));
                 } else {
-                    _this.drawGMapDistricts();
+                    _this.drawDistricts();
                 }
             }
 
@@ -499,7 +499,7 @@ define([
             // Cache it for later use
             geoJSONData = geo;
 
-            this.drawGMapDistricts();
+            this.drawDistricts();
 
             gmDistrictsInitialized = true;
         },
