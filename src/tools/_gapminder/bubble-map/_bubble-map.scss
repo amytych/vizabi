@@ -2,7 +2,7 @@
 @import '../../tool';
 
 .vzb-tool-bubble-map {
-	@extend .vizabi-tool;
+	@extend .vzb-tool;
 
 	@import '../../../components/_gapminder/bubble-map/bubble-map';
 	@import '../../../components/_gapminder/header/header';

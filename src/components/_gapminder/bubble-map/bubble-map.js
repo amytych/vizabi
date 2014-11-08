@@ -16,27 +16,18 @@ define([
         svg,
         svgLayer,
         tooltip,
-        gmBubbleLayer,
-        bubble,
-        bubbleEnter,
+        geoJSONPath,
         geoJSONData,
-        gmOverlay,
-        d3MapInitialized,
-        gmInitialized,
+        gmBubbleLayer,
         gmOverlayInitialized,
         gmDistrictsInitialized,
-        gmBubblesInitialized,
-        data,
+        mapInitialized,
         currentData,
         indicator,
-        time,
         radiusScale,
         colorScale,
         visuals,
-        geoJSONPath,
         currentRender,
-        radiusScaleRange = [3, 15],
-        colorScaleRange = ['#7fb5f5', '#d70927'],
         bubbleStrokeWidth = 1.5;
 
     // Some handy helpers and getters
@@ -55,12 +46,12 @@ define([
     }
 
     // radiusScale is always defined before calling
-    function _getRadiusScale (d) {
+    function _getRadius (d) {
         return radiusScale(_getValue(d));
     }
 
     // colorScale is always defined before calling
-    function _getColorScale (d) {
+    function _getColor (d) {
         return colorScale(_getValue(d));
     }
 
@@ -141,22 +132,22 @@ define([
          * Ideally, it contains only operations related to data events
          */
         update: function() {
-            var _this = this;
+            var _this = this,
+                radiusScaleRange = [3, 15],
+                colorScaleRange = ['#7fb5f5', '#d70927'],
+                extremes;
 
-            time        = this.model.time.value;
             indicator   = this.model.show.indicator;
             visuals     = this.model.show.visuals;
-            renderType  = this.model.show.render || 'online';
-            data        = _.cloneDeep(this.model.data.getItems());
-            currentData = data.filter(function(row) { return (row.time == time); });
-            min         = d3.min(data, function(d) { return _getValue(d); });
-            max         = d3.max(data, function(d) { return _getValue(d); });
-            radiusScale = d3.scale.linear().domain([min, max]).range(radiusScaleRange);
-            colorScale  = d3.scale.linear().domain([min, max]).range(colorScaleRange);
+            currentData = this.getCurrentData();
+            extremes     = this.getExtremes();
+            radiusScale = d3.scale.linear().domain(extremes).range(radiusScaleRange);
+            colorScale  = d3.scale.linear().domain(extremes).range(colorScaleRange);
 
             // TODO: If render type has changed, the map have to be initialized again
             // simply reload the page to take care of that
             // it's just for the testing phase, to be removed in the final code
+            renderType  = this.model.show.render || 'online';
             if (currentRender !== renderType) window.location.reload();
 
             if (_renderOffline()) {
@@ -188,22 +179,15 @@ define([
                 streetViewControl: false
             });
 
-            // currentData is needed to fit map bounds
-            time        = this.model.time.value;
-            data        = _.cloneDeep(this.model.data.getItems());
-            currentData = data.filter(function(row) { return (row.time == time); });
-
-            map.fitBounds(this.getMapBounds(currentData));
-
-            gmInitialized = true;
+            // fit map bounds to accomodate currentData
+            map.fitBounds(this.getMapBounds(this.getCurrentData()));
 
             this.update();
         },
 
         initializeGMapOverlay: function () {
-            var _this = this;
-
-            gmOverlay = new google.maps.OverlayView();
+            var _this = this,
+                gmOverlay = new google.maps.OverlayView();
 
             gmOverlay.onAdd = function () {
                 // Geo Shapes
@@ -228,7 +212,6 @@ define([
 
                     if (_bubblesVisible()) {
                         _this.drawBubbles();
-                        gmBubblesInitialized = true;
                     }
                 };
             };
@@ -265,6 +248,7 @@ define([
 
         drawBubbles: function () {
             var _this = this,
+                bubble, bubbleEnter,
                 layer, wrapper, cx, cy;
 
             // Define differences between d3 map and google map
@@ -276,7 +260,7 @@ define([
             } else {
                 layer = gmBubbleLayer;
                 wrapper = 'svg:svg';
-                cx = cy = function (d) { return _getRadiusScale(d) + bubbleStrokeWidth; }
+                cx = cy = function (d) { return _getRadius(d) + bubbleStrokeWidth; }
             }
 
             bubble = layer.selectAll('.vzb-bm-bubble-holder')
@@ -306,25 +290,28 @@ define([
                     _this.removeHighlight.call(this);
                     _this.hideTooltip();
                 })
-                .attr('r', function (d) { return _getRadiusScale(d); });
+                .attr('r', _getRadius);
 
             // Remove bubbles that are no longer in the data
             bubble.exit().remove();
 
             // Update existing bubbles
             if (!_renderOffline()) {
-                // Position google maps bubbles
-                bubble.each(function (d) { return _this.transform.call(this, d); });
+                // Position and size google maps bubbles
+                bubble
+                  .attr('width', function (d) { return (_getRadius(d) + bubbleStrokeWidth) * 2; })
+                  .attr('height', function (d) { return (_getRadius(d) + bubbleStrokeWidth) * 2; })
+                  .each(_this.transform);
             }
 
             bubble.select('circle')
                 .attr('cx', cx)
                 .attr('cy', cy)
-                .attr('fill', function (d) { return _getColorScale(d); })
+                .attr('fill', _getColor)
                 // TODO: Fix transition and zoom scaling problem for d3 bubbles
                 // .transition()
                 // .duration(150)
-                .attr('r', function (d) { return _getRadiusScale(d); });
+                .attr('r', _getRadius);
         },
 
         /**
@@ -377,7 +364,7 @@ define([
                 .attr('d', p)
                 .attr('fill', function (d) {
                     var d = _findD(d.properties.name),
-                    color = d ? _getColorScale(d) : 'transparent';
+                    color = d ? _getColor(d) : 'transparent';
                     return color;
                 });
         },
@@ -408,7 +395,7 @@ define([
             path = d3.geo.path()
                 .projection(projection);
 
-            svg = d3.select('#vzb-bm-holder').append('svg')
+            svg = d3.select(mapHolder).append('svg')
                 .attr('width', mapWidth)
                 .attr('height', mapHeight);
 
@@ -433,13 +420,14 @@ define([
                     // Put all the districts on the map
                     _this.drawDistricts();
 
-                    d3MapInitialized = true;
+                    mapInitialized = true;
 
                     _this.update();
                 });
             });
 
-            _this.initializeZoomButtons();
+            // Add zooming functionality to buttons
+            d3.selectAll('.vzb-bm-zoom').on('click', _this.clickZoomHandler);
         },
 
         /**
@@ -447,7 +435,7 @@ define([
          * @return {Void}
          */
         updateD3Map: function () {
-            if (d3MapInitialized) {
+            if (mapInitialized) {
                 // Update districts
                 this.drawDistricts();
 
@@ -465,6 +453,8 @@ define([
          * @return {Void}
          */
         drawD3World: function (world) {
+            var combinedArea;
+
             // Draw land
             svgLayer.append('path')
                 .datum(topojson.merge(world, world.objects.countries.geometries))
@@ -478,13 +468,13 @@ define([
                 .attr('d', path);
 
             // draw the (hidden) combined area of all districts…
-            svgLayer.append('path')
+            combinedArea = svgLayer.append('path')
                 .datum(topojson.merge(geoJSONData, geoJSONData.objects.districts.geometries))
                 .attr('class', 'vzb-bm-area')
                 .attr('d', path);
 
             // and zoom to it all
-            this.zoomTo(d3.select('.vzb-bm-area').data()[0]);
+            this.zoomTo(combinedArea.data()[0]);
         },
 
         /**
@@ -561,6 +551,32 @@ define([
         },
 
         /**
+         * Get cloned data set from the model
+         */
+        getData: function () {
+            return _.cloneDeep(this.model.data.getItems());
+        },
+
+        /**
+         * Filter data set for current time
+         */
+        getCurrentData: function () {
+            return _.filter(this.getData(), {time: this.model.time.value});
+        },
+
+        /**
+         * Get min and max values for the data set
+         */
+        getExtremes: function () {
+            var data = this.getData();
+
+            return [
+                d3.min(data, _getValue),
+                d3.max(data, _getValue)
+            ];
+        },
+
+        /**
          * Returns Bounds for currentDisplay data
          * @param  {Array} locations currentDisplay data
          * @return {google.maps.LatLngBounds}
@@ -609,7 +625,7 @@ define([
             var scale = d3.event.scale;
 
             svgLayer.selectAll('.vzb-bm-bubble')
-                .attr('r', function (d) { return _getRadiusScale(d) / scale; })
+                .attr('r', function (d) { return _getRadius(d) / scale; })
                 .style('stroke-width', function (d) { return 1.5 / scale; })
             svgLayer.style('stroke-width', .5 / scale + 'px');
             svgLayer.attr('transform', 'translate(' + d3.event.translate + ')scale(' + scale + ')');
@@ -625,15 +641,8 @@ define([
              pos = projection.fromLatLngToDivPixel(pos);
 
              return d3.select(this)
-                 .attr('width', function (d) { return (_getRadiusScale(d) + bubbleStrokeWidth) * 2; })
-                 .attr('height', function (d) { return (_getRadiusScale(d) + bubbleStrokeWidth) * 2; })
-                 .style('left', function (d) { return (pos.x - _getRadiusScale(d) + bubbleStrokeWidth * 2) + 'px'; })
-                 .style('top', function (d) { return (pos.y - _getRadiusScale(d) + bubbleStrokeWidth * 2) + 'px'; });
-        },
-
-        initializeZoomButtons: function () {
-            var _this = this;
-            d3.selectAll('.vzb-bm-zoom').on('click', _this.clickZoomHandler);
+                 .style('left', function (d) { return (pos.x - _getRadius(d) + bubbleStrokeWidth * 2) + 'px'; })
+                 .style('top', function (d) { return (pos.y - _getRadius(d) + bubbleStrokeWidth * 2) + 'px'; });
         },
 
         clickZoomHandler: function () {
