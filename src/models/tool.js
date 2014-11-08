@@ -35,7 +35,7 @@ define([
 
             //constructor is similar to model
             this._super(values, this._intervals, binds);
-            
+
             //load whenever show or language changes
             var _this = this;
             this.on(["change:state:show", "change:language"], function() {
@@ -94,7 +94,8 @@ define([
             return function() {
                 var model = JSON.stringify(_this.getObject()),
                     c = 0,
-                    max = 20;
+                    max = 20,
+                    defer = $.Deferred();
                 while (c < max) {
                     validate(_this);
                     model2 = JSON.stringify(_this.getObject());
@@ -110,7 +111,11 @@ define([
                         }
                     }
                 }
-                return;
+                //postpone resolution to last callstack
+                _.defer(function() {
+                    defer.resolve();
+                });
+                return defer;
             }
         }
 

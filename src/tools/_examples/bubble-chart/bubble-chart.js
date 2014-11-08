@@ -13,7 +13,7 @@ define([
 
             this.name = 'bubble-chart';
             this.template = "tools/_examples/bubble-chart/bubble-chart";
-            
+
             //instantiating components
             this.components = [{
                 component: '_gapminder/header',
@@ -41,8 +41,8 @@ define([
          */
         toolModelValidation: function(model) {
 
-            var state = model.state,
-                data = model.data;
+            var state = model.state;
+            var data = model.data;
 
             //don't validate anything if data hasn't been loaded
             if(!data.getItems() || data.getItems().length < 1) {
@@ -64,6 +64,7 @@ define([
             var state = model.state;
             return [{
                 "from": "data",
+                //FIXME not sure if we need union here. barchart doesn't have it
                 "select": _.union(["geo", "geo.name", "time", "geo.region", state.show.indicator]),
                 "where": {
                     "geo": state.show.geo,

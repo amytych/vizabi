@@ -5,6 +5,5 @@ node_modules/
 dist/
 *.swp
 /preview_pages/assets/_preview.tpl
-/src/plugins.js
 /src/assets/style/vizabi.scss
->>>>>>> develop
+/src/plugins.js

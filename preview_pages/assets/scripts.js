@@ -123,7 +123,11 @@ function parseURL() {
         options = JSON.parse(hash.replace("#", ""));
 
         var placeholder = $(".placeholder").attr("id");
-        var state = JSON.parse(options.state);
+
+
+        console.error('FIXME: parse attempt throws error when options.state is empty')
+        console.error('see related issues #20 and #24')
+        var state = ""; //should be JSON.parse(options.state);
 
         url.state = state;
         url.lang = options.lang;
@@ -213,7 +217,5 @@ $(function() {
         // all dropdowns
         $('.wrapper-dropdown').removeClass('active');
     });
-
-    window.onhashchange = parseURL;
 
 });
