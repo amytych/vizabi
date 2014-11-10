@@ -21,6 +21,8 @@ $clrMarkerHover: darken($clrMarker, 20%);
     stroke: rgba(0,0,0,.5);
     stroke-opacity: .5;
     fill-opacity: .5;
+    cursor: default;
+    transition: fill-opacity .1s ease-in;
 }
 
 .vzb-bm-district.vzb-bm-hover {
@@ -70,11 +72,16 @@ $clrMarkerHover: darken($clrMarker, 20%);
   position: absolute;
 }
 
+.vzb-bm-bubble-holder {
+  cursor: default;
+}
+
 .vzb-bm-bubble {
   cursor: default;
   // fill: $clrMarker;
   stroke: $clrMarkerStroke;
   stroke-width: 1.5px;
+  transition: stroke .1s ease-in;
 }
 
 .vzb-bm-hover {
@@ -93,12 +100,12 @@ $clrMarkerHover: darken($clrMarker, 20%);
 
 .vzb-bm-tooltip {
     position: absolute;
-    z-index: 99999;
-    background-color: #129dd5;
-    border: 1px solid #074058;
-    font-size: 11px;
-    color: #fff;
     padding: 5px;
+    background-color: rgba(0,0,0,.9);
+    color: #fff;
+    border-radius: 2px;
+    z-index: 99999;
+    @include font-size(12px);
 }
 
 .vzb-bm-zoom {

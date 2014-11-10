@@ -28,6 +28,7 @@ define([
         colorScale,
         visuals,
         currentRender,
+        hovered,
         bubbleStrokeWidth = 1.5;
 
     // Some handy helpers and getters
@@ -182,6 +183,11 @@ define([
             // fit map bounds to accomodate currentData
             map.fitBounds(this.getMapBounds(this.getCurrentData()));
 
+            // attach zoom events, to display additional features
+            google.maps.event.addListener(map, 'zoom_changed', this.gMapZoomHandler);
+
+            d3.select(mapHolder).on('mousemove', this.mapMousemoveHandler.bind(this));
+
             this.update();
         },
 
@@ -190,12 +196,14 @@ define([
                 gmOverlay = new google.maps.OverlayView();
 
             gmOverlay.onAdd = function () {
+                var panes = this.getPanes().overlayMouseTarget;
+
                 // Geo Shapes
-                svgLayer = d3.select(this.getPanes().overlayMouseTarget).append('svg:svg')
+                svgLayer = d3.select(panes).append('svg:svg')
                     .attr('class', 'vzb-bm-geoshape-overlay');
 
                 // Bubbles
-                gmBubbleLayer = d3.select(this.getPanes().overlayMouseTarget).append('div')
+                gmBubbleLayer = d3.select(panes).append('div')
                     .attr('class', 'vzb-bm-bubble-overlay');
 
                 gmOverlay.draw = function () {
@@ -246,129 +254,6 @@ define([
             }
         },
 
-        drawBubbles: function () {
-            var _this = this,
-                bubble, bubbleEnter,
-                layer, wrapper, cx, cy;
-
-            // Define differences between d3 map and google map
-            if (_renderOffline()) {
-                layer = svgLayer;
-                wrapper = 'svg:g';
-                cx = function(d) { return projection([d.lon, d.lat])[0]; }
-                cy = function(d) { return projection([d.lon, d.lat])[1]; }
-            } else {
-                layer = gmBubbleLayer;
-                wrapper = 'svg:svg';
-                cx = cy = function (d) { return _getRadius(d) + bubbleStrokeWidth; }
-            }
-
-            bubble = layer.selectAll('.vzb-bm-bubble-holder')
-                .data(_bubblesVisible() ? currentData : [], function (d) { return d.geo; });
-
-            // Create new bubbles
-            bubbleEnter = bubble
-                .enter()
-                // Google map needs svg for every bubble
-                // d3 could do without it, it's just for compatibility's sake
-                .append(wrapper)
-                .attr('class', 'vzb-bm-bubble-holder');
-
-            // Add a circle.
-            bubbleEnter
-                .append('svg:circle')
-                .attr('class', 'vzb-bm-bubble')
-                .on('mouseenter', function (d) {
-                    _this.showData(d);
-                    _this.addHighlight.call(this, d);
-                })
-                .on('mousemove', function (d) {
-                    _this.showTooltip(d);
-                })
-                .on('mouseleave', function (d) {
-                    _this.hideData();
-                    _this.removeHighlight.call(this);
-                    _this.hideTooltip();
-                })
-                .attr('r', _getRadius);
-
-            // Remove bubbles that are no longer in the data
-            bubble.exit().remove();
-
-            // Update existing bubbles
-            if (!_renderOffline()) {
-                // Position and size google maps bubbles
-                bubble
-                  .attr('width', function (d) { return (_getRadius(d) + bubbleStrokeWidth) * 2; })
-                  .attr('height', function (d) { return (_getRadius(d) + bubbleStrokeWidth) * 2; })
-                  .each(_this.transform);
-            }
-
-            bubble.select('circle')
-                .attr('cx', cx)
-                .attr('cy', cy)
-                .attr('fill', _getColor)
-                // TODO: Fix transition and zoom scaling problem for d3 bubbles
-                // .transition()
-                // .duration(150)
-                .attr('r', _getRadius);
-        },
-
-        /**
-         * Draw districts on the map, google map or offline map
-         * @return {Void}
-         */
-        drawDistricts: function () {
-            var _this = this,
-                districts = [],
-                district,
-                // get appropriate path, if it's d3 map it was defined already
-                p = _renderOffline() ? path : d3.geo.path().projection(_gmProjection);
-
-
-            if (_shapesVisible()) {
-                districts = topojson.feature(geoJSONData, geoJSONData.objects.districts).features;
-                // Filter districts based on currentData
-                districts = _.filter(districts, function (district) { return _findD(district.properties.name); });
-            }
-
-            district = svgLayer.selectAll('.vzb-bm-district')
-                .data(districts, function (d) { return 'vzb-bm-district-' + d.properties.name; });
-
-            // Create new districts
-            district
-                .enter().append('svg:path')
-                .attr('class', 'vzb-bm-district')
-                .on('mouseenter', function (d) {
-                    var d = _findD(d.properties.name);
-                    if (d) {
-                        _this.showData(d);
-                    }
-                })
-                .on('mousemove', function (d) {
-                    var d = _findD(d.properties.name);
-                    if (d) {
-                        _this.showTooltip(d);
-                    }
-                })
-                .on('mouseleave', function (d) {
-                    _this.hideData();
-                    _this.hideTooltip();
-                });
-
-            // Remove districts that are no longer in the data
-            district.exit().remove();
-
-            // Update exisiting districts
-            district
-                .attr('d', p)
-                .attr('fill', function (d) {
-                    var d = _findD(d.properties.name),
-                    color = d ? _getColor(d) : 'transparent';
-                    return color;
-                });
-        },
-
         /**
          * Build the d3 world map and draw the districts
          * @return {Void}
@@ -390,14 +275,15 @@ define([
                 .translate([0, 0])
                 .scale(1)
                 .scaleExtent([1, 400])
-                .on('zoom', _this.zoomHandler);
+                .on('zoom', _this.d3MapZoomHandler);
 
             path = d3.geo.path()
                 .projection(projection);
 
             svg = d3.select(mapHolder).append('svg')
                 .attr('width', mapWidth)
-                .attr('height', mapHeight);
+                .attr('height', mapHeight)
+                .on('mousemove', this.mapMousemoveHandler.bind(this));
 
             svgLayer = svg.append('g');
 
@@ -477,6 +363,103 @@ define([
             this.zoomTo(combinedArea.data()[0]);
         },
 
+        drawBubbles: function () {
+            var _this = this,
+                bubble, bubbleEnter,
+                layer, wrapper, cx, cy;
+
+            // Define differences between d3 map and google map
+            if (_renderOffline()) {
+                layer = svgLayer;
+                wrapper = 'svg:g';
+                cx = function(d) { return projection([d.lon, d.lat])[0]; }
+                cy = function(d) { return projection([d.lon, d.lat])[1]; }
+            } else {
+                layer = gmBubbleLayer;
+                wrapper = 'svg:svg';
+                cx = cy = function (d) { return _getRadius(d) + bubbleStrokeWidth; }
+            }
+
+            bubble = layer.selectAll('.vzb-bm-bubble-holder')
+                .data(_bubblesVisible() ? currentData : [], function (d) { return d.geo; });
+
+            // Create new bubbles
+            bubbleEnter = bubble
+                .enter()
+                // Google map needs svg for every bubble
+                // d3 could do without it, it's just for compatibility's sake
+                .append(wrapper)
+                .attr('class', 'vzb-bm-bubble-holder');
+
+            // Add a circle.
+            bubbleEnter
+                .append('svg:circle')
+                .attr('class', 'vzb-bm-bubble')
+                .attr('data-name', function (d) { return d.name.toLowerCase().split(' ').join('_'); })
+                .attr('r', _getRadius);
+
+            // Remove bubbles that are no longer in the data
+            bubble.exit().remove();
+
+            // Update existing bubbles
+            if (!_renderOffline()) {
+                // Position and size google maps bubbles
+                bubble
+                  .attr('width', function (d) { return (_getRadius(d) + bubbleStrokeWidth) * 2; })
+                  .attr('height', function (d) { return (_getRadius(d) + bubbleStrokeWidth) * 2; })
+                  .each(_this.transform);
+            }
+
+            bubble.select('circle')
+                .attr('cx', cx)
+                .attr('cy', cy)
+                .attr('fill', _getColor)
+                // TODO: Fix transition and zoom scaling problem for d3 bubbles
+                // .transition()
+                // .duration(150)
+                .attr('r', _getRadius);
+        },
+
+        /**
+         * Draw districts on the map, google map or offline map
+         * @return {Void}
+         */
+        drawDistricts: function () {
+            var _this = this,
+                districts = [],
+                district,
+                // get appropriate path, if it's d3 map it was defined already
+                p = _renderOffline() ? path : d3.geo.path().projection(_gmProjection);
+
+
+            if (_shapesVisible()) {
+                districts = topojson.feature(geoJSONData, geoJSONData.objects.districts).features;
+                // Filter districts based on currentData
+                districts = _.filter(districts, function (district) { return _findD(district.properties.name); });
+            }
+
+            district = svgLayer.selectAll('.vzb-bm-district')
+                .data(districts, function (d) { return 'vzb-bm-district-' + d.properties.name.toLowerCase().split(' ').join('_'); });
+
+            // Create new districts
+            district
+                .enter().append('svg:path')
+                .attr('class', 'vzb-bm-district')
+                .attr('data-name', function (d) { return d.properties.name.toLowerCase().split(' ').join('_'); });
+
+            // Remove districts that are no longer in the data
+            district.exit().remove();
+
+            // Update exisiting districts
+            district
+                .attr('d', p)
+                .attr('fill', function (d) {
+                    var d = _findD(d.properties.name),
+                    color = d ? _getColor(d) : 'transparent';
+                    return color;
+                });
+        },
+
         /**
          * Callback for loading geoJSON data
          * @param  {Object} error
@@ -518,11 +501,12 @@ define([
         },
 
         /**
-         * Highlight the element
+         * Highlight the elements when mobing over the svg
+         * @param  {d3 selection} elements to highlight
          * @return {Void}
          */
-        addHighlight: function (d) {
-            d3.select(this).classed('vzb-bm-hover', true);
+        addHighlight: function (elements) {
+            elements.classed('vzb-bm-hover', true);
         },
 
         /**
@@ -530,7 +514,7 @@ define([
          * @return {Void}
          */
         removeHighlight: function () {
-            d3.select(this).classed('vzb-bm-hover', false);
+            d3.selectAll('.vzb-bm-hover').classed('vzb-bm-hover', false);
         },
 
         /**
@@ -539,6 +523,9 @@ define([
          * @return {Void}
          */
         showData: function (d) {
+            if (!d.name) {
+              d = _findD(d.properties.name);
+            }
             infoDisplay.text(_getValue(d));
         },
 
@@ -618,10 +605,17 @@ define([
         },
 
         /**
+         * Zoom handler for google maps
+         */
+        gMapZoomHandler: function () {
+            // console.log(map.getZoom());
+        },
+
+        /**
          * Zoom handler for map created with D3
          * @return {Void}
          */
-        zoomHandler: function() {
+        d3MapZoomHandler: function() {
             var scale = d3.event.scale;
 
             svgLayer.selectAll('.vzb-bm-bubble')
@@ -629,25 +623,13 @@ define([
                 .style('stroke-width', function (d) { return 1.5 / scale; })
             svgLayer.style('stroke-width', .5 / scale + 'px');
             svgLayer.attr('transform', 'translate(' + d3.event.translate + ')scale(' + scale + ')');
-        },
 
-        /**
-         * Puts bubbles on the google maps and sizes them accordingly
-         * @param  {Datum} d feature
-         * @return {d3 Selection} transformed d3 selection
-         */
-        transform: function (d) {
-             var pos = new google.maps.LatLng(d.lat, d.lon);
-             pos = projection.fromLatLngToDivPixel(pos);
-
-             return d3.select(this)
-                 .style('left', function (d) { return (pos.x - _getRadius(d) + bubbleStrokeWidth * 2) + 'px'; })
-                 .style('top', function (d) { return (pos.y - _getRadius(d) + bubbleStrokeWidth * 2) + 'px'; });
+            // console.log(scale);
         },
 
         clickZoomHandler: function () {
             var scale = zoom.scale(),
-                factor = this.id === 'vzb-bm-zoom-in' ? 1.4 : 0.6,
+                factor = this.id === 'vzb-bm-zoom-in' ? 1.2 : 0.8,
                 newScale = scale * factor,
                 extent = zoom.scaleExtent(),
                 center, translate, newTranslate;
@@ -667,6 +649,74 @@ define([
             }
 
             d3.event.preventDefault();
+        },
+
+        /**
+         * Mouse move handler for the map
+         * @return {Void}
+         */
+        mapMousemoveHandler: function () {
+            var el = d3.select(d3.event.target),
+                d = el.data()[0],
+                name = el.attr('data-name'),
+                elements;
+
+            // Avoids flickering on google maps
+            // If there is no name data on the target try first child
+            // (on google maps every circle has it's own svg element)
+            if (!name && el.classed('vzb-bm-bubble-holder')) {
+              el = el.select('circle');
+              d = el.data()[0];
+              name = el.attr('data-name');
+            }
+
+            // Remove highlight, hide tooltip and displayed data
+            // when no bubble or shape is hovered
+            if (!name && hovered) {
+                this.removeHighlight();
+                this.hideTooltip();
+                this.hideData();
+                hovered = undefined;
+                return;
+            }
+
+            // Keep moving the tooltip following the cursor
+            if (name) {
+                this.showTooltip(d);
+            }
+
+            // Avoid repetitive highlighting and displaying data
+            // If bubble or shape is hovered, check if it's
+            // a different one than currently highlighted
+            if (name && hovered !== name) {
+                // Remove highlight from previous element
+                this.removeHighlight();
+
+                // Find all elements on the map that need to be highlighted
+                elements = d3.selectAll('[data-name=' + name + ']');
+
+                // There should always be at least one element
+                // but better safe than sorry
+                if (elements.length) {
+                  this.addHighlight(elements);
+                  this.showData(d);
+                  hovered = name;
+                }
+            }
+        },
+
+        /**
+         * Puts bubbles on the google maps and sizes them accordingly
+         * @param  {Datum} d feature
+         * @return {d3 Selection} transformed d3 selection
+         */
+        transform: function (d) {
+             var pos = new google.maps.LatLng(d.lat, d.lon);
+             pos = projection.fromLatLngToDivPixel(pos);
+
+             return d3.select(this)
+                 .style('left', function (d) { return (pos.x - _getRadius(d) + bubbleStrokeWidth * 2) + 'px'; })
+                 .style('top', function (d) { return (pos.y - _getRadius(d) + bubbleStrokeWidth * 2) + 'px'; });
         }
     });
 
