@@ -134,14 +134,14 @@ define([
          */
         update: function() {
             var _this = this,
-                radiusScaleRange = [3, 15],
+                radiusScaleRange = this.getRadiusScaleRange(),
                 colorScaleRange = ['#7fb5f5', '#d70927'],
                 extremes;
 
             indicator   = this.model.show.indicator;
             visuals     = this.model.show.visuals;
             currentData = this.getCurrentData();
-            extremes     = this.getExtremes();
+            extremes    = this.getExtremes();
             radiusScale = d3.scale.linear().domain(extremes).range(radiusScaleRange);
             colorScale  = d3.scale.linear().domain(extremes).range(colorScaleRange);
 
@@ -174,11 +174,34 @@ define([
         },
 
         initializeGMap: function () {
+            /** @constructor */
+            function CoordMapType(tileSize) {
+                this.tileSize = tileSize;
+            }
+
+            CoordMapType.prototype.getTile = function(coord, zoom, ownerDocument) {
+                var div = ownerDocument.createElement('div');
+                div.innerHTML = coord;
+                div.style.width = this.tileSize.width + 'px';
+                div.style.height = this.tileSize.height + 'px';
+                div.style.fontSize = '10';
+                div.style.borderStyle = 'solid';
+                div.style.borderWidth = '1px';
+                div.style.color = '#f00';
+                div.style.backgroundColor = 'rgba(255,0,0,.2)';
+                return div;
+            };
+
             map = new google.maps.Map(mapHolder, {
                 mapTypeId: google.maps.MapTypeId.TERRAIN,
                 mapTypeControl: false,
                 streetViewControl: false
             });
+
+            // Insert this overlay map type as the first overlay map type at
+            // position 0. Note that all overlay map types appear on top of
+            // their parent base map.
+            // map.overlayMapTypes.insertAt(0, new CoordMapType(new google.maps.Size(256, 256)));
 
             // fit map bounds to accomodate currentData
             map.fitBounds(this.getMapBounds(this.getCurrentData()));
@@ -717,6 +740,20 @@ define([
              return d3.select(this)
                  .style('left', function (d) { return (pos.x - _getRadius(d) + bubbleStrokeWidth * 2) + 'px'; })
                  .style('top', function (d) { return (pos.y - _getRadius(d) + bubbleStrokeWidth * 2) + 'px'; });
+        },
+
+        /**
+         * Compute and return proper radius scale range
+         * Min is set to 2, max can be 20 and can be determined by the state or defaults to 10
+         * @return {Array} min and max for scale range
+         */
+        getRadiusScaleRange: function () {
+            var min = 2,
+                max = 20,
+                state = this.model.show.bubbleSize;
+
+            max = (state < min) ? min : (state > max) ? max : state;
+            return [min, max];
         }
     });
 
