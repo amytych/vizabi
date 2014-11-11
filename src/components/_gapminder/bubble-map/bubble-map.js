@@ -744,7 +744,7 @@ define([
 
         /**
          * Compute and return proper radius scale range
-         * Min is set to 2, max can be 20 and can be determined by the state or defaults to 10
+         * Min is set to 2, max can be determined by the state and is capped at 20
          * @return {Array} min and max for scale range
          */
         getRadiusScaleRange: function () {
