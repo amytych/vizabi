@@ -750,7 +750,9 @@ define([
         getRadiusScaleRange: function () {
             var min = 2,
                 max = 20,
-                state = this.model.show.bubbleSize;
+                state = this.model.bubble.size;
+
+            // console.log(this.model.bubbleSize);
 
             max = (state < min) ? min : (state > max) ? max : state;
             return [min, max];
