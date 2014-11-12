@@ -120,11 +120,7 @@ define([
             infoDisplay = d3.select('#vzb-bm-info-text');
             tooltip = d3.select('#vzb-bm-tooltip');
 
-            if (_renderOffline()) {
-                this.initializeD3Map();
-            } else {
-                this.initializeGMap();
-            }
+            this.initializeMap();
         },
 
         /*
@@ -145,17 +141,15 @@ define([
             radiusScale = d3.scale.linear().domain(extremes).range(radiusScaleRange);
             colorScale  = d3.scale.linear().domain(extremes).range(colorScaleRange);
 
-            // TODO: If render type has changed, the map have to be initialized again
-            // simply reload the page to take care of that
-            // it's just for the testing phase, to be removed in the final code
+            // If render type has changed, the map have to be initialized again
             renderType  = this.model.show.render || 'online';
-            if (currentRender !== renderType) window.location.reload();
-
-            if (_renderOffline()) {
-                this.updateD3Map();
-            } else {
-                this.updateGMap();
+            if (currentRender !== renderType) {
+                currentRender = renderType;
+                this.reinitializeMap();
+                return;
             }
+
+            this.updateMap();
         },
 
         /*
@@ -171,6 +165,35 @@ define([
 
                 svg.attr('width', mapWidth).attr('height', mapHeight);
             }
+        },
+
+        initializeMap: function () {
+            if (_renderOffline()) {
+                this.initializeD3Map();
+            } else {
+                this.initializeGMap();
+            }
+        },
+
+        updateMap: function () {
+            if (_renderOffline()) {
+                this.updateD3Map();
+            } else {
+                this.updateGMap();
+            }
+        },
+
+        destroyMap: function () {
+            if (_renderOffline()) {
+                this.destroyGMap();
+            } else {
+                this.destroyD3Map();
+            }
+        },
+
+        reinitializeMap: function () {
+            this.destroyMap();
+            this.initializeMap();
         },
 
         initializeGMap: function () {
@@ -212,6 +235,11 @@ define([
             d3.select(mapHolder).on('mousemove', this.mapMousemoveHandler.bind(this));
 
             this.update();
+        },
+
+        destroyGMap: function () {
+            map = null;
+            d3.select(mapHolder).selectAll('*').remove();
         },
 
         initializeGMapOverlay: function () {
@@ -750,7 +778,11 @@ define([
         getRadiusScaleRange: function () {
             var min = 2,
                 max = 20,
+<<<<<<< feature/d3-map
                 state = this.model.show.bubbleSize;
+=======
+                state = this.model.bubble.size;
+>>>>>>> local
 
             max = (state < min) ? min : (state > max) ? max : state;
             return [min, max];
