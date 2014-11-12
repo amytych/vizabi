@@ -13,7 +13,7 @@ define([
             this.components = [{
                 component: '_gapminder/bubble-map',
                 placeholder: '.vzb-tool-viz',
-                model: ['state.show', 'data', 'state.time']
+                model: ['state.show', 'data', 'state.time', 'state.bubble']
             }, {
                 component: '_gapminder/header',
                 placeholder: '.vzb-tool-title'
@@ -21,6 +21,10 @@ define([
                 component: '_gapminder/timeslider',
                 placeholder: '.vzb-tool-timeslider',
                 model: ['state.time']
+            }, {
+                component: '_gapminder/bubble-size',
+                placeholder: '.vzb-tool-bubblesize',
+                model: ['state.bubble']
             }, {
                 component: '_gapminder/buttonlist',
                 placeholder: '.vzb-tool-buttonlist'

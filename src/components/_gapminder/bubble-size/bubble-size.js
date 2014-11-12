@@ -62,9 +62,8 @@ define([
         },
 
         slideHandler: function () {
-            this.model.size = +d3.event.target.value;;
+            this.model.size = +d3.event.target.value;
         }
-
     });
 
     return BubbleSize ;

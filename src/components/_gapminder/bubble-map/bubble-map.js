@@ -778,11 +778,7 @@ define([
         getRadiusScaleRange: function () {
             var min = 2,
                 max = 20,
-<<<<<<< feature/d3-map
-                state = this.model.show.bubbleSize;
-=======
                 state = this.model.bubble.size;
->>>>>>> local
 
             max = (state < min) ? min : (state > max) ? max : state;
             return [min, max];
