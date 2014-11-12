@@ -1,10 +1,10 @@
 
 @import '../../tool';
 
-.vzb-tool-bubble-map {
+.vzb-tool-map {
 	@extend .vzb-tool;
 
-	@import '../../../components/_gapminder/bubble-map/bubble-map';
+	@import '../../../components/_gapminder/map/map';
 	@import '../../../components/_gapminder/header/header';
 	@import '../../../components/_gapminder/timeslider/timeslider';
 	@import '../../../components/_gapminder/bubble-size/_bubble-size.scss';

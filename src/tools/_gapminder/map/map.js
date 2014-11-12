@@ -6,12 +6,12 @@ define([
     var BubbleMap = Tool.extend({
         init: function(config, options) {
 
-            this.name = 'bubble-map';
-            this.template = "tools/_gapminder/bubble-map/bubble-map";
+            this.name = 'map';
+            this.template = "tools/_gapminder/map/map";
 
 	        //add components
             this.components = [{
-                component: '_gapminder/bubble-map',
+                component: '_gapminder/map',
                 placeholder: '.vzb-tool-viz',
                 model: ['state.show', 'data', 'state.time', 'state.bubble']
             }, {

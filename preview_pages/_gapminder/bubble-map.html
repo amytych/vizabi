@@ -10,18 +10,18 @@
         <div id="dropdown-size" class="wrapper-dropdown" tabindex="1">
             <span>Size</span>
             <ul class="dropdown">
-                <li><a onclick="phoneSize('bubble-map')">Mobile Portrait</a>
+                <li><a onclick="phoneSize('map')">Mobile Portrait</a>
                 </li>
-                <li><a onclick="phoneSize('bubble-map', 'landscape')">Mobile Landscape</a>
+                <li><a onclick="phoneSize('map', 'landscape')">Mobile Landscape</a>
                 </li>
-                <li><a onclick="randomSize('bubble-map')">Random Size</a>
+                <li><a onclick="randomSize('map')">Random Size</a>
                 </li>
-                <li><a onclick="fullSize('bubble-map')">Full Screen</a>
+                <li><a onclick="fullSize('map')">Full Screen</a>
                 </li>
             </ul>
         </div>
 
-        <button onclick="randomSize('bubble-map')">RANDOM</button>
+        <button onclick="randomSize('map')">RANDOM</button>
 
         <label>|</label>
 
@@ -40,9 +40,9 @@
         <div id="dropdown-language" class="wrapper-dropdown" tabindex="1">
             <span>Language</span>
             <ul class="dropdown">
-                <li><a onclick="setLanguage('bubble-map','en')">English</a>
+                <li><a onclick="setLanguage('map','en')">English</a>
                 </li>
-                <li><a onclick="setLanguage('bubble-map','pt')">Portuguese</a>
+                <li><a onclick="setLanguage('map','pt')">Portuguese</a>
                 </li>
             </ul>
         </div>
@@ -53,7 +53,7 @@
                 text-transform: uppercase;">
               <b>Ebola map–work in progress</b>
     </div>
-    <div id="bubble-map" class="placeholder"></div>
+    <div id="map" class="placeholder"></div>
 
 
 </div>
@@ -98,7 +98,7 @@ $(function() {
         //path
         data: {
             reader: 'local-json',
-            path: '../../data-waffles/bubble-map/{{LANGUAGE}}/response.json'
+            path: '../../data-waffles/map/{{LANGUAGE}}/response.json'
         },
 
         //language properties
@@ -106,7 +106,7 @@ $(function() {
             id: "en",
             strings: {
                 en: {
-                    "title": "Bubble Map",
+                    "title": "Map",
                     "timeslider/play": "Play",
                     "timeslider/pause": "Pause"
                 }
@@ -124,7 +124,7 @@ $(function() {
     };
 
     showState(options.state);
-    myVizabi = new Vizabi("_gapminder/bubble-map", "#bubble-map", options);
+    myVizabi = new Vizabi("_gapminder/map", "#map", options);
 
 });
 
