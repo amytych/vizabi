@@ -612,7 +612,11 @@ define([
          * Filter data set for current time
          */
         getCurrentData: function () {
-            return _.filter(this.getData(), {time: this.model.time.value});
+            var timeFormat = d3.time.format('%m/%d/%Y'),
+                time = timeFormat(this.model.time.value),
+                data = _.filter(this.getData(), function (row) { return timeFormat(new Date(row.time)) === time});
+
+            return data;
         },
 
         /**

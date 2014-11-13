@@ -18,7 +18,7 @@
         height: 0;
         border-style: solid;
         border-width: 8px 50px 8px 0;
-        border-color: transparent $vzb-ts-line-color transparent transparent;
+        border-color: transparent #A4CBD3 transparent transparent;
         border-radius: 0 50px 50px 0;
     }
 
@@ -41,7 +41,7 @@
             cursor: pointer;
             @include border-radius(8px);
             @include transition(left, 0.1s, ease-in-out);
-            background-color: $vzb-ts-handle-color;
+            background-color: $vzb-color-primary;
             top: -12px;
             width: 16px;
             height: 16px;
@@ -50,7 +50,7 @@
             cursor: pointer;
             @include border-radius(8px);
             @include transition(left, 0.1s, ease-in-out);
-            background: $vzb-ts-handle-color;
+            background: $vzb-color-primary;
             top: -12px;
             width: 8px;
             height: 8px;
