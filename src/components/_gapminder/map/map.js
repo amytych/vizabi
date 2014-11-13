@@ -135,13 +135,14 @@ define([
             var _this = this,
                 radiusScaleRange = this.getRadiusScaleRange(),
                 colorScaleRange = ['#7fb5f5', '#d70927'],
-                extremes;
+                scale, extremes;
 
             indicator   = this.model.show.indicator;
             visuals     = this.model.show.visuals;
+            scale       = this.model.show.scale || 'sqrt';
             currentData = this.getCurrentData();
             extremes    = this.getExtremes();
-            radiusScale = d3.scale.linear().domain(extremes).range(radiusScaleRange);
+            radiusScale = d3.scale[scale]().domain(extremes).range(radiusScaleRange);
             colorScale  = d3.scale.linear().domain(extremes).range(colorScaleRange);
 
             // If render type has changed, the map have to be initialized again
@@ -547,13 +548,19 @@ define([
          */
         showTooltip: function (d) {
             var host = svg ? svg.node() : mapHolder,
-                mouse = d3.mouse(host).map( function(d) { return parseInt(d) + 10; } );
+                mouse = d3.mouse(host).map( function(d) { return parseInt(d); } );
 
             tooltip
                 .classed('vzb-hidden', false)
-                .style('left', mouse[0] + 'px')
-                .style('top', mouse[1] + 'px')
                 .html(d.name || d.properties.name);
+
+            // Position the tooltip at the top center of the cursor
+            mouse[0] -= tooltip[0][0].offsetWidth / 2;
+            mouse[1] -= tooltip[0][0].offsetHeight + 10;
+
+            tooltip
+                .style('left', mouse[0] + 'px')
+                .style('top', mouse[1] + 'px');
         },
 
         /**
@@ -614,7 +621,8 @@ define([
         getCurrentData: function () {
             var timeFormat = d3.time.format('%m/%d/%Y'),
                 time = timeFormat(this.model.time.value),
-                data = _.filter(this.getData(), function (row) { return timeFormat(new Date(row.time)) === time});
+                data = _.filter(this.getData(), {time: time});
+                // data = _.filter(this.getData(), function (row) { return timeFormat(new Date(row.time)) === time});
 
             return data;
         },
