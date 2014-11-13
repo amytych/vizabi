@@ -81,7 +81,7 @@ $(function() {
                 indicator: 'ebola_cases_total',
                 scale: 'linear',
                 visuals: ['bubble', 'shape'],
-                render: 'offline'
+                render: 'online'
             },
             bubble: {
                 size: 20
@@ -100,6 +100,16 @@ $(function() {
         data: {
             reader: 'local-json',
             path: '../../data-waffles/map/{{LANGUAGE}}/response.json'
+        },
+
+        dataDistricts: {
+            reader: "local-json",
+            path: '../../data-waffles/map/{{LANGUAGE}}/response_1.json'
+        },
+
+        dataWorls: {
+            reader: "local-json",
+            path: '../../data-waffles/map/{{LANGUAGE}}/response_2.json'
         },
 
         //language properties

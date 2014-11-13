@@ -16,9 +16,6 @@ define([
         svg,
         svgLayer,
         tooltip,
-        geoJSONPath,
-        geoJSONData,
-        worldJSONData,
         gmBubbleLayer,
         gmOverlayInitialized,
         mapInitialized,
@@ -108,13 +105,8 @@ define([
          * Ideally, it contains instantiations related to template
          */
         postRender: function() {
-            // TODO: Setup appropriate json path, local or dropbox
-            // obviously to be removed in final version
-            geoJSONPath = location.hostname === 'localhost' ? '' : '/u/64730059/gapminder';
-            geoJSONPath += '/data-waffles/map/en/topo_json_features.json';
 
-            // TODO: Needed for simple change of the rendering mode
-            // it's just for the testing phase, to be removed in the final code
+            // Needed for change of the rendering mode
             renderType  = this.model.show.render || 'online';
             currentRender = renderType;
 
@@ -225,6 +217,8 @@ define([
                 streetViewControl: false
             });
 
+            this.initializeGMapOverlay();
+
             // Insert this overlay map type as the first overlay map type at
             // position 0. Note that all overlay map types appear on top of
             // their parent base map.
@@ -238,7 +232,6 @@ define([
 
             d3.select(mapHolder).on('mousemove.mapMouseMove', this.mapMousemoveHandler.bind(this));
 
-            this.update();
         },
 
         destroyGMap: function () {
@@ -270,12 +263,7 @@ define([
                     projection = this.getProjection();
 
                     if (_shapesVisible()) {
-                        // Make sure that district JSON is loaded
-                        if (!geoJSONData) {
-                            d3.json(geoJSONPath, _this.geoJSONCallback.bind(_this));
-                        } else {
-                            _this.drawDistricts();
-                        }
+                        _this.drawDistricts();
                     }
 
                     if (_bubblesVisible()) {
@@ -285,33 +273,19 @@ define([
             };
 
             gmOverlay.setMap(map);
-            gmOverlayInitialized = true;
         },
 
         updateGMap: function () {
-            var _this = this;
-
-            // Initialize google map overlay, when update() is called first time
-            if (!gmOverlayInitialized) {
-                _this.initializeGMapOverlay();
-                return;
-            }
-
             // svgLayer is assigned upon initialization, this.drawGMapDistricts() is also called then
             // no need to do it twice
             if (svgLayer) {
-                // Make sure that district JSON is loaded
-                if (!geoJSONData) {
-                    d3.json(geoJSONPath, this.geoJSONCallback.bind(this));
-                } else {
-                    _this.drawDistricts();
-                }
+                this.drawDistricts();
             }
 
             // gmBubbleLayer is assigned upon initialization, this.drawBubbles() is also called then
             // no need to do it twice
             if (gmBubbleLayer) {
-                _this.drawBubbles();
+                this.drawBubbles();
             }
         },
 
@@ -350,23 +324,7 @@ define([
 
             svg.call(zoom);
 
-            if (!worldJSONData) {
-                // First, create the world
-                d3.json(worldJSONPath, function(error, world) {
-                    if (error) return console.error(error);
-                    worldJSONData = world;
-                    _this.drawD3World();
-                });
-            } else {
-                _this.drawD3World();
-            }
-
-            if (!geoJSONData) {
-                // Load the districts
-                d3.json(geoJSONPath, _this.geoJSONCallback.bind(_this));
-            } else {
-                _this.drawDistricts();
-            }
+            _this.drawD3World();
 
             // Add zooming functionality to buttons
             d3.selectAll('.vzb-bm-zoom').on('click.zoomClick', _this.clickZoomHandler);
@@ -386,12 +344,8 @@ define([
          * @return {Void}
          */
         updateD3Map: function () {
-            if (!geoJSONData) {
-                // Load the districts
-                d3.json(geoJSONPath, this.geoJSONCallback.bind(this));
-            } else {
-                this.drawDistricts();
-            }
+            // Update districts
+            this.drawDistricts();
 
             // Update bubbles
             this.drawBubbles();
@@ -405,11 +359,13 @@ define([
          * @return {Void}
          */
         drawD3World: function () {
-            var combinedArea;
+            var worldData = this.getWorldData(),
+                districtData = this.getDistrictData(),
+                combinedArea;
 
             // draw the (hidden) combined area of all districts…
             combinedArea = svgLayer.insert('path', ':first-child')
-                .datum(topojson.merge(geoJSONData, geoJSONData.objects.districts.geometries))
+                .datum(topojson.merge(districtData, districtData.objects.districts.geometries))
                 .attr('class', 'vzb-bm-area')
                 .attr('d', path);
 
@@ -418,13 +374,13 @@ define([
 
             // Draw countries borders
             svgLayer.insert('path', ':first-child')
-                .datum(topojson.mesh(worldJSONData, worldJSONData.objects.countries, function(a, b) { return a !== b; }))
+                .datum(topojson.mesh(worldData, worldData.objects.countries, function(a, b) { return a !== b; }))
                 .attr('class', 'vzb-bm-boundary')
                 .attr('d', path);
 
             // Draw land
             svgLayer.insert('path', ':first-child')
-                .datum(topojson.merge(worldJSONData, worldJSONData.objects.countries.geometries))
+                .datum(topojson.merge(worldData, worldData.objects.countries.geometries))
                 .attr('class', 'vzb-bm-land')
                 .attr('d', path);
         },
@@ -494,12 +450,19 @@ define([
             var _this = this,
                 districts = [],
                 district,
+                districtData = this.getDistrictData(),
                 // get appropriate path, if it's d3 map it was defined already
                 p = _renderOnline() ? d3.geo.path().projection(_gmProjection) : path;
 
+            // It's a known bug, that update is called multiple times
+            // sometimes it may be called before google map is initialized with projection
+            // Prevent drawing districts in that case
+            if (_renderOnline() && typeof projection !== 'object') {
+               return; 
+            }
 
             if (_shapesVisible()) {
-                districts = topojson.feature(geoJSONData, geoJSONData.objects.districts).features;
+                districts = topojson.feature(districtData, districtData.objects.districts).features;
                 // Filter districts based on currentData
                 districts = _.filter(districts, function (district) { return _findD(district.properties.name); });
             }
@@ -524,21 +487,6 @@ define([
                     color = d ? _getColor(d) : 'transparent';
                     return color;
                 });
-        },
-
-        /**
-         * Callback for loading geoJSON data
-         * @param  {Object} error
-         * @param  {Object} geo   GeoJSON data
-         * @return {Void}
-         */
-        geoJSONCallback: function (error, geo) {
-            if (error) return console.error(error);
-
-            // Cache it for later use
-            geoJSONData = geo;
-
-            this.drawDistricts();
         },
 
         /**
@@ -612,7 +560,9 @@ define([
          * Get cloned data set from the model
          */
         getData: function () {
-            return _.cloneDeep(this.model.data.getItems());
+            return _.cloneDeep(_.find(this.model.data.getItems(), function (d) {
+                return _.isArray(d);
+            }));
         },
 
         /**
@@ -620,11 +570,23 @@ define([
          */
         getCurrentData: function () {
             var timeFormat = d3.time.format('%m/%d/%Y'),
-                time = timeFormat(this.model.time.value),
-                data = _.filter(this.getData(), {time: time});
-                // data = _.filter(this.getData(), function (row) { return timeFormat(new Date(row.time)) === time});
+                time = timeFormat(this.model.time.value);
 
-            return data;
+            return _.filter(this.getData(), {time: time});
+        },
+
+        getDistrictData: function () {
+            return _.find(this.model.data.getItems(), function (d) {
+                return d.objects && d.objects.districts;
+            });
+        },
+
+        getWorldData: function () {
+            // Find the world topo json
+            // data array order is not guaranteed
+            return _.find(this.model.data.getItems(), function (d) {
+                return d.objects && d.objects.countries;
+            });
         },
 
         /**

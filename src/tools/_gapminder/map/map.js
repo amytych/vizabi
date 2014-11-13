@@ -38,6 +38,7 @@ define([
 
         getQuery: function(model) {
             var state = model.state;
+
             //build query with state info
             var query = [{
                     select: [
@@ -51,7 +52,26 @@ define([
                         geo: state.show.geo,
                         'geo.category': state.show['geo.category'],
                         time: state.timeRange
-                    }}];
+                    }
+                }, {
+                    select: [
+                        'topo'
+                    ],
+                    where: {
+                        'geo': '*',
+                        'geo.category': '*',
+                        'time': '*'
+                    }
+                }, {
+                    select: [
+                        'topo'
+                    ],
+                    where: {
+                        'geo': '*',
+                        'geo.category': '*',
+                        'time': '*'
+                    }
+                }];
 
             return query;
         }
