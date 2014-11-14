@@ -557,6 +557,26 @@ define([
         },
 
         /**
+         * Get data for the districts coordinates
+         * @return {Object} topoJSON with coordinates
+         */
+        getDistrictData: function () {
+            return _.find(this.model.data.getItems(), function (d) {
+                return d.objects && d.objects.districts;
+            });
+        },
+
+        /**
+         * Get data for the world coordinates
+         * @return {Object} topoJSON with the worls coordinates
+         */
+        getWorldData: function () {
+            return _.find(this.model.data.getItems(), function (d) {
+                return d.objects && d.objects.countries;
+            });
+        },
+
+        /**
          * Get cloned data set from the model
          */
         getData: function () {
@@ -573,20 +593,6 @@ define([
                 time = timeFormat(this.model.time.value);
 
             return _.filter(this.getData(), {time: time});
-        },
-
-        getDistrictData: function () {
-            return _.find(this.model.data.getItems(), function (d) {
-                return d.objects && d.objects.districts;
-            });
-        },
-
-        getWorldData: function () {
-            // Find the world topo json
-            // data array order is not guaranteed
-            return _.find(this.model.data.getItems(), function (d) {
-                return d.objects && d.objects.countries;
-            });
         },
 
         /**
