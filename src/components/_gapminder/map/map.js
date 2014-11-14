@@ -8,34 +8,20 @@ define([
 
     var mapWidth,
         mapHeight,
-        mapHolder,
-        infoDisplay,
         projection,
-        zoom,
         path,
+        zoom,
         svg,
         svgLayer,
-        tooltip,
-        gmBubbleLayer,
-        gmOverlayInitialized,
-        mapInitialized,
-        currentData,
+        bubbleLayer,
         indicator,
         radiusScale,
         colorScale,
-        visuals,
         currentRender,
         hovered,
         bubbleStrokeWidth = 1.5;
 
     // Some handy helpers and getters
-
-    // Find the node in waffle data (currentData)
-    // based on the name of feature property from geoJSON
-    // Probably won't be needed in the final data set
-    function _findD (name) {
-        return _.find(currentData, function (elem) { return name == elem.name; });
-    }
 
     // get the vaule for the indicator
     // may also not be needed after final data set is stnadardized
@@ -53,35 +39,17 @@ define([
         return colorScale(_getValue(d));
     }
 
-    // visuals are always defined before calling
-    function _bubblesVisible () {
-        return visuals.indexOf('bubble') > -1;
-    }
-
-    // visuals are always defined before calling
-    function _shapesVisible () {
-        return visuals.indexOf('shape') > -1;
-    }
-
-    function _renderOffline () {
-        return typeof google === 'undefined' || renderType === 'offline';
-    }
-
-    function _renderOnline () {
-        return typeof google !== 'undefined' && renderType === 'online';
-    }
-
     // Turn the google map overlay projection into a d3 projection
-    function _gmProjection (coordinates) {
-        var googleCoordinates = new google.maps.LatLng(coordinates[1], coordinates[0]),
-            pixelCoordinates = projection.fromLatLngToDivPixel(googleCoordinates);
+    function _gmProjection (coords) {
+        var gmCoords = new google.maps.LatLng(coords[1], coords[0]),
+            pxCoords = projection.fromLatLngToDivPixel(gmCoords);
 
         // SVG holding districts on a map is huge,
         // 8000x8000 and offseted by -4000px top and left
         // it has to be like that to accomodate high zoom levels
         // otherwise districts may be truncated when zooming
-        // hence the pixel coordinates need to take this into account
-        return [pixelCoordinates.x + 4000, pixelCoordinates.y + 4000];
+        // hence the pixel coords need to take this into account
+        return [pxCoords.x + 4000, pxCoords.y + 4000];
     }
 
 
@@ -105,15 +73,13 @@ define([
          * Ideally, it contains instantiations related to template
          */
         postRender: function() {
-
             // Needed for change of the rendering mode
-            renderType  = this.model.show.render || 'online';
-            currentRender = renderType;
+            currentRender = this.model.show.render;
 
             // Cache needed DOM nodes
-            mapHolder = document.getElementById('vzb-bm-holder');
-            infoDisplay = d3.select('#vzb-bm-info-text');
-            tooltip = d3.select('#vzb-bm-tooltip');
+            this.mapHolder   = d3.select('#vzb-bm-holder');
+            this.infoDisplay = d3.select('#vzb-bm-info-text');
+            this.tooltip     = d3.select('#vzb-bm-tooltip');
 
             this.initializeMap();
         },
@@ -124,23 +90,22 @@ define([
          * Ideally, it contains only operations related to data events
          */
         update: function() {
-            var _this = this,
-                radiusScaleRange = this.getRadiusScaleRange(),
-                colorScaleRange = ['#7fb5f5', '#d70927'],
+            var radiusScaleRange = this.getRadiusScaleRange(),
+                colorScaleRange  = ['#7fb5f5', '#d70927'],
                 scale, extremes;
 
             indicator   = this.model.show.indicator;
-            visuals     = this.model.show.visuals;
-            scale       = this.model.show.scale || 'sqrt';
-            currentData = this.getCurrentData();
+            scale       = this.model.show.scale;
             extremes    = this.getExtremes();
             radiusScale = d3.scale[scale]().domain(extremes).range(radiusScaleRange);
             colorScale  = d3.scale.linear().domain(extremes).range(colorScaleRange);
+            // colorScale  = d3.scale.category10().domain(extremes);
+
+            this.currentData = this.getCurrentData();
 
             // If render type has changed, the map have to be initialized again
-            renderType  = this.model.show.render || 'online';
-            if (currentRender !== renderType) {
-                currentRender = renderType;
+            if (currentRender !== this.model.show.render) {
+                currentRender = this.model.show.render;
                 this.reinitializeMap();
                 return;
             }
@@ -155,16 +120,16 @@ define([
          */
         resize: function() {
             // Just resize the SVG map holder and the overlay
-            if (!_renderOnline()) {
-                mapWidth = mapHolder.offsetWidth;
-                mapHeight = mapHolder.offsetHeight;
+            if (!this.renderOnline()) {
+                mapWidth = this.mapHolder.node().offsetWidth;
+                mapHeight = this.mapHolder.node().offsetHeight;
 
                 svg.attr('width', mapWidth).attr('height', mapHeight);
             }
         },
 
         initializeMap: function () {
-            if (_renderOnline()) {
+            if (this.renderOnline()) {
                 this.initializeGMap();
             } else {
                 this.initializeD3Map();
@@ -172,7 +137,7 @@ define([
         },
 
         updateMap: function () {
-            if (_renderOnline()) {
+            if (this.renderOnline()) {
                 this.updateGMap();
             } else {
                 this.updateD3Map();
@@ -180,7 +145,7 @@ define([
         },
 
         destroyMap: function () {
-            if (_renderOnline()) {
+            if (this.renderOnline()) {
                 this.destroyD3Map();
             } else {
                 this.destroyGMap();
@@ -211,7 +176,7 @@ define([
                 return div;
             };
 
-            map = new google.maps.Map(mapHolder, {
+            map = new google.maps.Map(this.mapHolder.node(), {
                 mapTypeId: google.maps.MapTypeId.TERRAIN,
                 mapTypeControl: false,
                 streetViewControl: false
@@ -230,18 +195,18 @@ define([
             // attach zoom events, to display additional features
             google.maps.event.addListener(map, 'zoom_changed', this.gMapZoomHandler);
 
-            d3.select(mapHolder).on('mousemove.mapMouseMove', this.mapMousemoveHandler.bind(this));
+            this.mapHolder.on('mousemove.mapMouseMove', this.mapMousemoveHandler.bind(this));
 
+            path = d3.geo.path().projection(_gmProjection);
         },
 
         destroyGMap: function () {
             map = null;
-            gmOverlayInitialized = false;
-            d3.select(mapHolder)
-            // .on('mousemove.mapMouseMove', null)
-            .attr('style', '')
-            .selectAll('*')
-            .remove();
+            this.mapHolder
+                .on('mousemove.mapMouseMove', null)
+                .attr('style', '')
+                .selectAll('*')
+                .remove();
         },
 
         initializeGMapOverlay: function () {
@@ -256,19 +221,12 @@ define([
                     .attr('class', 'vzb-bm-geoshape-overlay');
 
                 // Bubbles
-                gmBubbleLayer = d3.select(panes).append('div')
+                bubbleLayer = d3.select(panes).append('div')
                     .attr('class', 'vzb-bm-bubble-overlay');
 
                 gmOverlay.draw = function () {
                     projection = this.getProjection();
-
-                    if (_shapesVisible()) {
-                        _this.drawDistricts();
-                    }
-
-                    if (_bubblesVisible()) {
-                        _this.drawBubbles();
-                    }
+                    _this.updateGMap();
                 };
             };
 
@@ -276,17 +234,8 @@ define([
         },
 
         updateGMap: function () {
-            // svgLayer is assigned upon initialization, this.drawGMapDistricts() is also called then
-            // no need to do it twice
-            if (svgLayer) {
-                this.drawDistricts();
-            }
-
-            // gmBubbleLayer is assigned upon initialization, this.drawBubbles() is also called then
-            // no need to do it twice
-            if (gmBubbleLayer) {
-                this.drawBubbles();
-            }
+            this.drawDistricts();
+            this.drawBubbles();
         },
 
         /**
@@ -294,28 +243,23 @@ define([
          * @return {Void}
          */
         initializeD3Map: function () {
-            var _this = this,
-                worldJSONPath = location.hostname === 'localhost' ? '' : '/u/64730059/gapminder';
-
-            worldJSONPath += '/data-waffles/map/en/world.json';
-
-            mapWidth = mapHolder.offsetWidth;
-            mapHeight = mapHolder.offsetHeight;
+            mapWidth = this.mapHolder.node().offsetWidth;
+            mapHeight = this.mapHolder.node().offsetHeight;
 
             projection = d3.geo.mercator()
                 .scale((mapWidth - 1) / 2 / Math.PI)
                 .translate([mapWidth / 2, mapHeight / 2]);
 
+            path = d3.geo.path()
+                .projection(projection);
+
             zoom = d3.behavior.zoom()
                 .translate([0, 0])
                 .scale(1)
                 .scaleExtent([1, 400])
-                .on('zoom', _this.d3MapZoomHandler);
+                .on('zoom', this.d3MapZoomHandler);
 
-            path = d3.geo.path()
-                .projection(projection);
-
-            svg = d3.select(mapHolder).append('svg')
+            svg = this.mapHolder.append('svg')
                 .attr('width', mapWidth)
                 .attr('height', mapHeight)
                 .on('mousemove.mapMouseMove', this.mapMousemoveHandler.bind(this));
@@ -324,10 +268,10 @@ define([
 
             svg.call(zoom);
 
-            _this.drawD3World();
+            this.drawWorld();
 
-            // Add zooming functionality to buttons
-            d3.selectAll('.vzb-bm-zoom').on('click.zoomClick', _this.clickZoomHandler);
+            this.setupZoomButtons();
+
             this.update();
         },
 
@@ -335,8 +279,8 @@ define([
             // Remove event listeners
             d3.selectAll('.vzb-bm-zoom').on('click.zoomClick', null);
             svg.on('mousemove.mapMouseMove', null);
-            mapInitialized = false;
-            d3.select(mapHolder).selectAll('*').remove();
+            svg = null;
+            this.mapHolder.selectAll('*').remove();
         },
 
         /**
@@ -358,7 +302,7 @@ define([
          * Create simple map of the world in d3
          * @return {Void}
          */
-        drawD3World: function () {
+        drawWorld: function () {
             var worldData = this.getWorldData(),
                 districtData = this.getDistrictData(),
                 combinedArea;
@@ -390,9 +334,16 @@ define([
                 bubble, bubbleEnter,
                 layer, wrapper, cx, cy;
 
+            // It's a known issue, that update is called multiple times
+            // sometimes it may be called before google map is initialized with projection
+            // Prevent drawing districts in that case
+            if (this.renderOnline() && typeof projection !== 'object') {
+               return; 
+            }
+
             // Define differences between d3 map and google map
-            if (_renderOnline()) {
-                layer = gmBubbleLayer;
+            if (this.renderOnline()) {
+                layer = bubbleLayer;
                 wrapper = 'svg:svg';
                 cx = cy = function (d) { return _getRadius(d) + bubbleStrokeWidth; }
             } else {
@@ -402,14 +353,19 @@ define([
                 cy = function(d) { return projection([d.lon, d.lat])[1]; }
             }
 
+            // It's a known issue, that update is called multiple times
+            // sometimes it may be called before google map is initialized
+            // so check if layer is available
+            if (!layer) {
+                return;
+            }
+
             bubble = layer.selectAll('.vzb-bm-bubble-holder')
-                .data(_bubblesVisible() ? currentData : [], function (d) { return d.geo; });
+                .data(this.bubblesVisible() ? this.currentData : [], function (d) { return d.geo; });
 
             // Create new bubbles
             bubbleEnter = bubble
                 .enter()
-                // Google map needs svg for every bubble
-                // d3 could do without it, it's just for compatibility's sake
                 .append(wrapper)
                 .attr('class', 'vzb-bm-bubble-holder');
 
@@ -424,7 +380,7 @@ define([
             bubble.exit().remove();
 
             // Update existing bubbles
-            if (_renderOnline()) {
+            if (this.renderOnline()) {
                 // Position and size google maps bubbles
                 bubble
                   .attr('width', function (d) { return (_getRadius(d) + bubbleStrokeWidth) * 2; })
@@ -447,24 +403,27 @@ define([
          * @return {Void}
          */
         drawDistricts: function () {
-            var _this = this,
-                districts = [],
-                district,
-                districtData = this.getDistrictData(),
-                // get appropriate path, if it's d3 map it was defined already
-                p = _renderOnline() ? d3.geo.path().projection(_gmProjection) : path;
+            var _this        = this,
+                districts    = [],
+                district;
 
-            // It's a known bug, that update is called multiple times
+            // It's a known issue, that update is called multiple times
             // sometimes it may be called before google map is initialized with projection
             // Prevent drawing districts in that case
-            if (_renderOnline() && typeof projection !== 'object') {
+            if (this.renderOnline() && typeof projection !== 'object') {
                return; 
             }
 
-            if (_shapesVisible()) {
-                districts = topojson.feature(districtData, districtData.objects.districts).features;
+            // For the same reason svgLayer may not be available yet
+            if (!svgLayer) {
+                return;
+            }
+
+            if (this.shapesVisible()) {
+                districts = this.getDistrictData();
+                districts = topojson.feature(districts, districts.objects.districts).features;
                 // Filter districts based on currentData
-                districts = _.filter(districts, function (district) { return _findD(district.properties.name); });
+                districts = _.filter(districts, function (district) { return _this.findD(district.properties.name); });
             }
 
             district = svgLayer.selectAll('.vzb-bm-district')
@@ -481,9 +440,9 @@ define([
 
             // Update exisiting districts
             district
-                .attr('d', p)
+                .attr('d', path)
                 .attr('fill', function (d) {
-                    var d = _findD(d.properties.name),
+                    var d = _this.findD(d.properties.name),
                     color = d ? _getColor(d) : 'transparent';
                     return color;
                 });
@@ -495,18 +454,18 @@ define([
          * @return {Void}
          */
         showTooltip: function (d) {
-            var host = svg ? svg.node() : mapHolder,
+            var host  = svg ? svg.node() : this.mapHolder.node(),
                 mouse = d3.mouse(host).map( function(d) { return parseInt(d); } );
 
-            tooltip
+            this.tooltip
                 .classed('vzb-hidden', false)
                 .html(d.name || d.properties.name);
 
             // Position the tooltip at the top center of the cursor
-            mouse[0] -= tooltip[0][0].offsetWidth / 2;
-            mouse[1] -= tooltip[0][0].offsetHeight + 10;
+            mouse[0] -= this.tooltip.node().offsetWidth / 2;
+            mouse[1] -= this.tooltip.node().offsetHeight + 10;
 
-            tooltip
+            this.tooltip
                 .style('left', mouse[0] + 'px')
                 .style('top', mouse[1] + 'px');
         },
@@ -516,7 +475,7 @@ define([
          * @return {Void}
          */
         hideTooltip: function () {
-            tooltip.classed('vzb-hidden', true);
+            this.tooltip.classed('vzb-hidden', true);
         },
 
         /**
@@ -543,9 +502,9 @@ define([
          */
         showData: function (d) {
             if (!d.name) {
-              d = _findD(d.properties.name);
+              d = this.findD(d.properties.name);
             }
-            infoDisplay.text(_getValue(d));
+            this.infoDisplay.text(_getValue(d));
         },
 
         /**
@@ -553,7 +512,7 @@ define([
          * @return {Void}
          */
         hideData: function () {
-            infoDisplay.text('');
+            this.infoDisplay.text('');
         },
 
         /**
@@ -589,8 +548,8 @@ define([
          * Filter data set for current time
          */
         getCurrentData: function () {
-            var timeFormat = d3.time.format('%m/%d/%Y'),
-                time = timeFormat(this.model.time.value);
+            var format = d3.time.format('%m/%d/%Y'),
+                time   = format(this.model.time.value);
 
             return _.filter(this.getData(), {time: time});
         },
@@ -635,12 +594,12 @@ define([
          * @return {Void}
          */
         zoomTo: function (d, animate) {
-            var bounds = path.bounds(d),
-                dx = bounds[1][0] - bounds[0][0],
-                dy = bounds[1][1] - bounds[0][1],
-                x = (bounds[0][0] + bounds[1][0]) / 2,
-                y = (bounds[0][1] + bounds[1][1]) / 2,
-                scale = .9 / Math.max(dx / mapWidth, dy / mapHeight),
+            var bounds    = path.bounds(d),
+                dx        = bounds[1][0] - bounds[0][0],
+                dy        = bounds[1][1] - bounds[0][1],
+                x         = (bounds[0][0] + bounds[1][0]) / 2,
+                y         = (bounds[0][1] + bounds[1][1]) / 2,
+                scale     = .9 / Math.max(dx / mapWidth, dy / mapHeight),
                 translate = [mapWidth / 2 - scale * x, mapHeight / 2 - scale * y];
 
             svg.transition()
@@ -671,11 +630,29 @@ define([
             // console.log(scale);
         },
 
+        setupZoomButtons: function () {
+            this.mapHolder.append('a')
+                .attr('href', '#')
+                .attr('title', 'Zoom in')
+                .attr('id', 'vzb-bm-zoom-in')
+                .attr('class', 'vzb-bm-zoom vzb-bm-zoom-in')
+                .text('+');
+
+            this.mapHolder.append('a')
+                .attr('href', '#')
+                .attr('title', 'Zoom out')
+                .attr('id', 'vzb-bm-zoom-out')
+                .attr('class', 'vzb-bm-zoom vzb-bm-zoom-out')
+                .text('–');
+
+            d3.selectAll('.vzb-bm-zoom').on('click.zoomClick', this.clickZoomHandler);
+        },
+
         clickZoomHandler: function () {
-            var scale = zoom.scale(),
-                factor = this.id === 'vzb-bm-zoom-in' ? 1.2 : 0.8,
+            var scale    = zoom.scale(),
+                factor   = this.id === 'vzb-bm-zoom-in' ? 1.2 : 0.8,
                 newScale = scale * factor,
-                extent = zoom.scaleExtent(),
+                extent   = zoom.scaleExtent(),
                 center, translate, newTranslate;
 
             if (extent[0] <= newScale && newScale <= extent[1]) {
@@ -700,8 +677,8 @@ define([
          * @return {Void}
          */
         mapMousemoveHandler: function () {
-            var el = d3.select(d3.event.target),
-                d = el.data()[0],
+            var el   = d3.select(d3.event.target),
+                d    = el.data()[0],
                 name = el.attr('data-name'),
                 elements;
 
@@ -709,8 +686,8 @@ define([
             // If there is no name data on the target try first child
             // (on google maps every circle has it's own svg element)
             if (!name && el.classed('vzb-bm-bubble-holder')) {
-              el = el.select('circle');
-              d = el.data()[0];
+              el   = el.select('circle');
+              d    = el.data()[0];
               name = el.attr('data-name');
             }
 
@@ -775,7 +752,29 @@ define([
 
             max = (state < min) ? min : (state > max) ? max : state;
             return [min, max];
+        },
+
+        // visuals are always defined before calling
+        bubblesVisible: function () {
+            return this.model.show.visuals.indexOf('bubble') > -1;
+        },
+
+        // visuals are always defined before calling
+        shapesVisible: function () {
+            return this.model.show.visuals.indexOf('shape') > -1;
+        },
+
+        renderOnline: function () {
+            return typeof google !== 'undefined' && this.model.show.render === 'online';
+        },
+
+        // Find the node in waffle data (currentData)
+        // based on the name of feature property from geoJSON
+        // Probably won't be needed in the final data set
+        findD: function (name) {
+            return _.find(this.currentData, {name: name});
         }
+
     });
 
     return BubbleMap;

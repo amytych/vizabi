@@ -4,8 +4,6 @@ define([
     'base/component'
 ], function(d3, Component) {
 
-    var indicator, min = 2, max = 20;
-
     var BubbleSize = Component.extend({
 
         /**
@@ -33,14 +31,12 @@ define([
          * At this point, this.element and this.placeholder are available as a d3 object
          */
         postRender: function() {
-            var value = this.model.size;
-            indicator = this.element.select('#vzb-bs-indicator');
-            slider = this.element.selectAll('#vzb-bs-slider');
+            var min = 2,
+                max = 20;
 
-            slider
+            this.slider = this.element.select('#vzb-bs-slider')
                 .attr('min', min)
                 .attr('max', max)
-                .attr('value', value)
                 .on('input', this.slideHandler.bind(this));
         },
 
@@ -50,7 +46,7 @@ define([
          * At this point, this.element is available as a d3 object
          */
         update: function() {
-            indicator.text(this.model.size);
+            this.slider.node().value = +this.model.size;
         },
 
         /**
