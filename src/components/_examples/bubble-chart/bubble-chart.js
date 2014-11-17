@@ -68,6 +68,7 @@ define([
             this.duration = +this.model.time.speed;
             this.minValue = this.model.data.minValue;
             this.maxValue = this.model.data.maxValue;
+            this.interpolator = this.model.data.interpolate;
             //this.names = this.model.data.entities;
             
             //TODO: #32 run only if data or show models changed
@@ -124,7 +125,7 @@ define([
             
             this.yearEl.text(d3.time.format("%d %b")(this.time));
             this.bubbles = this.bubbleContainer.selectAll('.vzb-bc-bubble')
-                .data(interpolate(this.dataNested, _this.time, _this.indicator));
+                .data(this.interpolator(this.dataNested, _this.time, _this.indicator));
         },
 
         
@@ -153,9 +154,7 @@ define([
                     return _this.rScale(d.now[_this.indicator[2]]||1);
                 })
                 // the following properties are updated with transition. radius can go down too
-                .transition()
-                .duration(this.playing?this.duration:0)
-                .ease("linear")
+                .transition().duration(this.playing?this.duration:0).ease("linear")
                 .attr("cy", function(d) {
                     return _this.yScale(d.now[_this.indicator[0]]||1);
                 })
@@ -256,49 +255,6 @@ define([
         
     });
 
-    
-    
-    /*
-     * INTERPOLATE:
-     * Executed whenever the container is resized
-     */
-    var interpolate = function(dataNested, time, indicator){
-        
-            var bisect = d3.bisector(function(d){return d}).left;
-            time = time.valueOf();
-        
-            dataNested.forEach(function(d){
-                if (d.now==null) d.now = {};
-                
-                //try to find the requested time among the times we have
-                var times = d.values.map(function(dd){return dd.time.valueOf();});
-                var found = times.indexOf(time);
-                
-                //if the time point exists in data
-                if(found>=0){
-                    //save what we found to a shortcut
-                    d.now = d.values[found];
-                }else{
-
-                    //otherwise need to interpolate the point of now{}
-                    var next = bisect(times, time);
-                    var prev = next-1;
-
-                    //boundary protection
-                    if(next==times.length)next = times.length-1;
-                    if(next==0)prev = 0;
-                    
-                    //interpolate the point of now using the two known points
-                    var fraction = (time - times[prev])/(times[next] - times[prev]);
-                    indicator.forEach(function(ind){
-                        d.now[ind]=d.values[prev][ind] + fraction*(d.values[next][ind]-d.values[prev][ind]);
-                    });
-                    
-                }
-                
-            });
-            return dataNested;
-        }
     
 
     //tooltip plugin (hotfix)

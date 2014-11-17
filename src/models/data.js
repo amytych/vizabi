@@ -123,9 +123,9 @@ define([
         /**
          * FILL GAPS
          * feels the gaps in data and fills them using linear interpolation
-         * @param data — flat array of data objects, each object contains indicators and a property of "time"
-         * @param indicators — array of strings — indicators to be interpolated independently
-         * /!\ data array has to be sorted by time (ascending)
+         * @data — flat array of data objects, each object contains indicators and a property of "time"
+         * @indicators — array of strings — indicators to be interpolated independently
+         * /!\ the input data array has to be sorted by time (ascending)
          */
         fillGaps: function(data, indicators){
             
@@ -179,7 +179,57 @@ define([
             });
 
             return data;
-        }         
+        },
+        
+        
+        /*
+         * INTERPOLATE:
+         * Interpolate across time points
+         * @dataNested - array of objects, one per SVG element,
+         * each object has 'values' array with time points between which we want to interpolate
+         * @time is the time point where data values are requested
+         * @indicators is an array of indicator names for which we need to interpolate
+         * the interpolation saves the result in the property .now for every input object in dataNested
+         */
+        interpolate: function(dataNested, time, indicators){
+
+                var bisect = d3.bisector(function(d){return d}).left;
+                time = time.valueOf();
+
+                dataNested.forEach(function(d){
+                    if (d.now==null) d.now = {};
+
+                    //try to find the requested time among the times we have
+                    var times = d.values.map(function(dd){return dd.time.valueOf();});
+                    var found = times.indexOf(time);
+
+                    //if the time point exists in data
+                    if(found>=0){
+
+                        //save what we found to a shortcut
+                        d.now = d.values[found];
+                    }else{
+
+                        //otherwise need to interpolate the point of now{}
+                        var next = bisect(times, time);
+                        var prev = next-1;
+
+                        //boundary protection
+                        if(next==times.length)next = times.length-1;
+                        if(next==0)prev = 0;
+
+                        //interpolate the point of NOW using the two known reference points
+                        var fraction = (time - times[prev])/(times[next] - times[prev]);
+                        indicators.forEach(function(ind){
+                            d.now[ind]=d.values[prev][ind] + fraction*(d.values[next][ind]-d.values[prev][ind]);
+                        });
+
+                    }
+
+                });
+                return dataNested;
+            }
+       
             
     });
 
