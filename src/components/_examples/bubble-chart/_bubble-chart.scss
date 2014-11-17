@@ -44,7 +44,10 @@ $vzb-bc-year-size:300px;
         @include opacity(0.1);
         @include font-size(250px);
         fill: $vzb-bc-color-bubble;
+        font-family: Calibri;
+        font-weight: bolder;
         text-anchor: middle;
+        filter:url(#vzb-bc-blur-effect);
         -webkit-touch-callout: none;
         -webkit-user-select: none;
         -khtml-user-select: none;
@@ -52,11 +55,23 @@ $vzb-bc-year-size:300px;
         -ms-user-select: none;
         user-select: none;
     }
+    .vzb-bc-axis-y-title, .vzb-bc-axis-x-title, .vzb-bc-axis-r-title{
+        font-family: Calibri;
+        font-weight: bolder;
+        font-size: 300%;
+        @include opacity(0.3);
+    }
+    .vzb-bc-axis-r-title{
+        @include opacity(0.1);
+    }
 }
 &.vzb-medium {
     .vzb-bubble-chart {
         .vzb-bc-year {
             @include font-size($vzb-bc-year-size / 3 * 2);
+        }
+        .vzb-bc-axis-y-title, .vzb-bc-axis-x-title, .vzb-bc-axis-r-title{
+            font-size: 200%;
         }
     }
 }
@@ -67,6 +82,9 @@ $vzb-bc-year-size:300px;
         }
         .vzb-bc-year {
             @include font-size($vzb-bc-year-size / 3);
+        }
+        .vzb-bc-axis-y-title, .vzb-bc-axis-x-title, .vzb-bc-axis-r-title{
+            font-size: 150%;
         }
     }
 }

@@ -28,12 +28,10 @@
         <div id="dropdown-options" class="wrapper-dropdown" tabindex="1">
             <span>OPTIONS</span>
             <ul class="dropdown">
-                <li><a onclick="manyCountries()">Many Countries</a>
-                </li>
-                <li><a onclick="setState()">WORLD - 2000 </a>
-                </li>
-                <li><a onclick="changeIndicator()">SWE, NOR, ZAF</a>
-                </li>
+                <li><a onclick="byCountries()">Countries in Total</a></li>
+                <li><a onclick="changeIndicator1()">Y=suspected cases</a></li>
+                <li><a onclick="changeIndicator2()">log scales</a></li>
+                <li><a onclick="byCounties()">Initial view</a></li>
             </ul>
         </div>
 
@@ -72,20 +70,25 @@ $(function() {
 
             //what to show
             show: {
-                geo: ['swe','nor','fin','bra','usa', 'chn', 'jpn', 'zaf', 'ind', 'ago'],
-                geo_category: ['country'],
-                indicator: ['lex', 'gdp', 'pop'],
+                geo: ['*'],
+                geo_category: ['county'],
+                indicator: ['Probable cases', 'Confirmed cases', 'Deaths', 'Suspected cases'],
                 scale: ['linear', 'linear', 'sqrt'],
-                unit: [1, 1000000000, 1000]
+                unit: [1, 1, 1],
+                dataIsProcessed: false
             },
 
             //time properties
             time: {
-                start: 1990,
-                end: 2012,
-                value: 1990,
-                step: 1,
-                speed: 300
+                
+                format: "%Y-%m-%d",
+                unit: "day",
+                start: 2014,
+                end: 2015,
+                value: "2014-09-27",
+                step: 2,
+                speed: 200
+                
             }
         },
 
@@ -93,7 +96,8 @@ $(function() {
         //data properties
         data: {
             reader: 'local-json',
-            path: '../../data-waffles/hello-world/{{LANGUAGE}}/response.json'
+            path: '../../data-waffles/ebola_data/{{LANGUAGE}}/ebolaMockData-v3.json',
+            isProcessed: false
         },
 
         //language properties
@@ -101,12 +105,12 @@ $(function() {
             id: "en",
             strings: {
                 en: {
-                    "title": "Table Title",
+                    "title": "Ebola data",
                     "timeslider/play": "Play",
                     "timeslider/pause": "Pause"
                 },
                 pt: {
-                    "title": "Título da Tabela",
+                    "title": "Datullo Ebolau",
                     "timeslider/play": "Iniciar",
                     "timeslider/pause": "Parar"
                 }
@@ -131,54 +135,64 @@ $(function() {
     myVizabi = new Vizabi("_examples/bubble-chart", "#bubble-chart", options);
 });
 
-function setState() {
+function changeIndicator1() {
     var newOption = {
         state: {
             show: {
-                geo: ['world'],
-                geo_category: ['planet'],
-                indicator: ['lex', 'gdp', 'pop'],
+                geo: ['*'],
+                geo_category: ['county'],
+                indicator: ['Probable cases', 'Suspected cases', 'Deaths', 'Cases'],
                 scale: ['linear', 'linear', 'sqrt'],
-                unit: [1, 1000000, 1000]
-            },
-            time: {
-                value: 2000
+                unit: [1, 1, 1],
+                dataIsProcessed: false
             }
         }
     };
     myVizabi.setOptions(newOption);
 }
 
-function changeIndicator() {
+function changeIndicator2() {
     var newOption = {
         state: {
             show: {
-                geo: ['swe', 'nor', 'zaf'],
-                geo_category: ['country'],
-                indicator: ['pop', 'lex', 'gdp'],
-                scale: ['linear', 'linear', 'sqrt'],
-                unit: [100000, 1, 1000000]
-            },
-            time: {
-                value: 2007
+                geo: ['*'],
+                geo_category: ['county'],
+                indicator: ['Probable cases', 'Confirmed cases', 'Deaths', 'Suspected cases'],
+                scale: ['log', 'log', 'sqrt'],
+                unit: [1, 1, 1],
+                dataIsProcessed: false
             }
         }
     };
     myVizabi.setOptions(newOption);
 }
 
-function manyCountries() {
+function byCountries() {
     var newOption = {
         state: url.state || {
             show: {
-                geo: ['swe','nor','fin','bra','usa', 'chn', 'jpn', 'zaf', 'ind', 'ago'],
+                geo: ['*'],
                 geo_category: ['country'],
-                indicator: ['lex', 'gdp', 'pop'],
+                indicator: ['Probable cases', 'Confirmed cases', 'Deaths', 'Suspected cases'],
                 scale: ['linear', 'linear', 'sqrt'],
-                unit: [1, 1000000000, 1000]
-            },
-            time: {
-                value: 2007
+                unit: [1, 1, 1],
+                dataIsProcessed: false
+            }
+        }
+    };
+    myVizabi.setOptions(newOption);
+}
+    
+function byCounties() {
+    var newOption = {
+        state: url.state || {
+            show: {
+                geo: ['*'],
+                geo_category: ['county'],
+                indicator: ['Probable cases', 'Confirmed cases', 'Deaths', 'Suspected cases'],
+                scale: ['linear', 'linear', 'sqrt'],
+                unit: [1, 1, 1],
+                dataIsProcessed: false
             }
         }
     };

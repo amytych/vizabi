@@ -51,6 +51,15 @@ define([
             if (this._items.length === 1) return this._items[0];
             return this._items;
         },
+        
+        /**
+         * Sets a new collection
+         * @param name - name of the property to store values in
+         * @param arg - the values to store
+         */
+        setItems: function(name, arg) {
+            this[name] = arg;
+        },
 
         /**
          * Gets limits
@@ -108,8 +117,70 @@ define([
                 });
 
             return defer;
-        }
+        },
+        
+         
+        /**
+         * FILL GAPS
+         * feels the gaps in data and fills them using linear interpolation
+         * @param data — flat array of data objects, each object contains indicators and a property of "time"
+         * @param indicators — array of strings — indicators to be interpolated independently
+         * /!\ data array has to be sorted by time (ascending)
+         */
+        fillGaps: function(data, indicators){
+            
+            // 1. Let prev and next be the reference points for interpolation
+            // each is a vector of length same as @indicators
+            var prev = [],
+                next = [],
+                done = [];
 
+            // 2. Go through all time points only once
+            data.forEach(function(datum, di){
+                //primitive check if input array is sorted
+                if(di>0 && datum.time < data[di-1].time) console.warn("Looks like the data array is not sorted by time. Iterpolation result might be a mess");
+
+                // 3. Now go through all indicators and fill in the missing values
+                indicators.forEach(function(indicator, i){
+
+                    //If we already have a value here, then save it to 1st reference point and move on
+                    if(datum[indicator]!=null){prev[i] = datum; next[i] = null; return;}
+
+                    //If the measurements havn't yet started or have finished — move on
+                    if(prev[i]==null || done[i]) return;
+
+                    //If we run into our 2nd reference point, then reset it: we need a new one
+                    if(next[i]==datum) next[i] = null;
+
+                    //If we got here then the value is missing and we need interpolation 
+                    //if we don't have the 2nd reference point, we need to find it
+                    if(next[i]==null){
+                        for(var s = di; s<data.length; s++){
+                            //if found the next value then save it and stop looping
+                            if(data[s][indicator]!=null){
+                                next[i] = data[s]; 
+                                break;
+                            }
+                        }
+                    }
+
+                    //If 2nd ref point is still NULL then measurements have finished and we quit
+                    if(next[i]==null) {done[i] = true; return;}
+
+                    //Finally, here goes interpolation!
+                    var fraction = (datum.time-prev[i].time)/(next[i].time-prev[i].time)                    
+                    datum[indicator] = prev[i][indicator] + ((next[i][indicator] - prev[i][indicator]) * fraction);
+                    //TODO: use utils function instead?
+                    //datum[indicator] = utils.interpolate(prev[i][indicator],next[i][indicator],fraction);
+                    
+                    //Save this point to 1st reference point for the next value
+                    prev[i] = datum;
+                });
+            });
+
+            return data;
+        }         
+            
     });
 
     return DataModel;

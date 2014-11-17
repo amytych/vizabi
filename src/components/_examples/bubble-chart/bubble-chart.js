@@ -4,7 +4,6 @@ define([
     'base/component'
 ], function($, d3, Component) {
 
-    var DURATION_FAST = 100; //ms
     
     function order(a, b) {
         return radius(b) - radius(a);
@@ -30,9 +29,7 @@ define([
             this.cScale = d3.scale.category10();
 
             this.xAxis = d3.svg.axis();
-            this.yAxis = d3.svg.axis();
-            
-            this.isDataPreprocessed = false;            
+            this.yAxis = d3.svg.axis();     
         },
 
         
@@ -48,6 +45,7 @@ define([
             this.xAxisEl = this.graph.select('.vzb-bc-axis-x');
             this.yTitleEl = this.graph.select('.vzb-bc-axis-y-title');
             this.xTitleEl = this.graph.select('.vzb-bc-axis-x-title');
+            this.rTitleEl = this.graph.select('.vzb-bc-axis-r-title');
             this.yearEl = this.graph.select('.vzb-bc-year');
             this.bubbleContainer = this.graph.select('.vzb-bc-bubbles');
             this.bubbles = null;
@@ -59,22 +57,18 @@ define([
          * Updates the component as soon as the model/models change
          */
         update: function() {
-            //TODO: preprocessing should go somewhere else, when the data is loaded
             var _this = this;
-            if(!this.isDataPreprocessed){                  
-                _this.model.data.getItems().forEach(function(d){
-                    d.name = d["geo.name"]; 
-                    d.region = d["geo.region"] || "world";
-                    _this.model.show.indicator.forEach(function(ind) { d[ind] = +d[ind]; });
-                });
-                this.isDataPreprocessed = true;
-            }
-            
-            this.data = this.model.data.getItems();
+            this.dataFlat = this.model.data.getItems();
+            this.dataNested = this.model.data.nested;
             this.indicator = this.model.show.indicator;
             this.scale = this.model.show.scale;
             this.units = this.model.show.unit || [1, 1, 1];
-            this.time = parseInt(d3.time.format("%Y")(this.model.time.value),10);
+            this.time = this.model.time.value;
+            this.playing = this.model.time.playing;
+            this.duration = +this.model.time.speed;
+            this.minValue = this.model.data.minValue;
+            this.maxValue = this.model.data.maxValue;
+            //this.names = this.model.data.entities;
             
             //TODO: #32 run only if data or show models changed
             this.updateShow();
@@ -92,23 +86,12 @@ define([
         updateShow: function(){
             var _this = this;
             
-            var minValue = this.indicator.map(function(ind) {
-                    return d3.min(_this.data, function(d) {
-                        return +d[ind];
-                    });
-                });
-            var maxValue = this.indicator.map(function(ind) {
-                    return d3.max(_this.data, function(d) {
-                        return +d[ind];
-                    });
-                });
-
             //10% difference margin in min and max
             var min = this.scale.map(function(scale, i) {
-                    return ((scale === "log") ? 1 : (minValue[i] - (maxValue[i] - minValue[i]) / 10));
+                    return ((scale === "log") ? 1 : (_this.minValue[i] - (_this.maxValue[i] - _this.minValue[i]) / 10));
                 });
             var max = this.scale.map(function(scale, i) {
-                    return maxValue[i] + (maxValue[i] - minValue[i]) / 10;
+                    return _this.maxValue[i] + (_this.maxValue[i] - _this.minValue[i]) / 10;
                 });
 
             //scales
@@ -138,12 +121,12 @@ define([
          */
         updateTime: function(){
             var _this = this;
-
-            this.yearEl.text(this.time);
+            
+            this.yearEl.text(d3.time.format("%d %b")(this.time));
             this.bubbles = this.bubbleContainer.selectAll('.vzb-bc-bubble')
-                .data(this.data.filter(function(d){return (+d.time === _this.time);}));
+                .data(interpolate(this.dataNested, _this.time, _this.indicator));
         },
-        
+
         
         /*
          * REDRAW DATA POINTS:
@@ -151,33 +134,39 @@ define([
          */     
         redrawDataPoints: function() {
             var _this = this;
-
-            //exit selection
+            
+            //exit selection, removes circles that don't have data objects
             this.bubbles.exit().remove();
             
-            //enter selection -- init circles
-            this.bubbles.enter().append("circle")            
-                .attr("class", "vzb-bc-bubble")
+            //enter selection, creates new circles
+            this.bubbles.enter().append("circle").attr("class", "vzb-bc-bubble");
+            
+            //update selection
+            this.bubbles
                 .style("fill", function(d) {
                     return _this.cScale(d.region);
                 })
                 .attr("data-tooltip", function(d) {
-                    return d.name;
-                });
-            
-            //update selection
-            var speed = this.model.time.speed;
-            this.bubbles.transition().duration(speed).ease("linear")            
-                .attr("cy", function(d) {
-                    return _this.yScale(d[_this.indicator[0]]);
-                })
-                .attr("cx", function(d) {
-                    return _this.xScale(d[_this.indicator[1]]);
+                    return d.key;
                 })
                 .attr("r", function(d) {
-                    return _this.rScale(d[_this.indicator[2]] || 1);
+                    return _this.rScale(d.now[_this.indicator[2]]||1);
+                })
+                // the following properties are updated with transition. radius can go down too
+                .transition()
+                .duration(this.playing?this.duration:0)
+                .ease("linear")
+                .attr("cy", function(d) {
+                    return _this.yScale(d.now[_this.indicator[0]]||1);
+                })
+                .attr("cx", function(d) {
+                    return _this.xScale(d.now[_this.indicator[1]]||1);
                 });
-        },
+            
+            // Call flush() after any zero-duration transitions to synchronously flush the timer queue
+            // and thus make transition instantaneous. See https://github.com/mbostock/d3/issues/1951
+            d3.timer.flush();
+        }, 
         
 
         /*
@@ -199,12 +188,12 @@ define([
                 case "medium":
                     margin = {top: 30, right: 60, left: 60, bottom: 40};
                     tick_spacing = 80;
-                    maxRadius = 30;
+                    maxRadius = 40;
                     break;
                 case "large":
                     margin = {top: 30, right: 60, left: 60, bottom: 40};
                     tick_spacing = 100;
-                    maxRadius = 50;
+                    maxRadius = 80;
                     break;
             }
 
@@ -233,24 +222,83 @@ define([
             this.yAxis.scale(this.yScale)
                 .orient("left")
                 .tickSize(6, 0)
-                .ticks(Math.max(height / tick_spacing, 2));
+                .ticks(Math.max(height / tick_spacing, 2))
+                //FIXME: for some reason .ticks() is not working for log scales. maybe d3 bug
+                .tickValues(this.scale[1] == "log"?[1, 5, 10, 50, 100, 500, 1000]:null);
 
             this.xAxis.scale(this.xScale)
                 .orient("bottom")
                 .tickSize(6, 0)
-                .ticks(Math.max(width / tick_spacing, 2));
+                .ticks(Math.max(width / tick_spacing, 2))
+                //FIXME: for some reason .ticks() is not working for log scales. maybe d3 bug
+                .tickValues(this.scale[0] == "log"?[1, 5, 10, 50, 100, 500, 1000]:null);
+            
 
             this.xAxisEl.attr("transform", "translate(0," + height + ")");
 
             this.yAxisEl.call(this.yAxis);
             this.xAxisEl.call(this.xAxis);
+                                    
+            this.yTitleEl.text(this.indicator[1])
+                .attr("dx", "0.5em")
+                .attr("dy", "0.3em");
+            this.xTitleEl.text(this.indicator[0])
+                .attr("transform", "translate(" + width + "," + height + ")")
+                .attr("text-anchor", "end")
+                .attr("dy", "-0.5em");
+            this.rTitleEl.text("Size: " + this.indicator[2])
+                .attr("transform", "translate(" + width + "," + 0 + ") rotate(-90)")
+                .attr("text-anchor", "end")
+                .attr("dy", "0.3em");
 
             this.redrawDataPoints();
-        }
-
+        },
+        
     });
 
     
+    
+    /*
+     * INTERPOLATE:
+     * Executed whenever the container is resized
+     */
+    var interpolate = function(dataNested, time, indicator){
+        
+            var bisect = d3.bisector(function(d){return d}).left;
+            time = time.valueOf();
+        
+            dataNested.forEach(function(d){
+                if (d.now==null) d.now = {};
+                
+                //try to find the requested time among the times we have
+                var times = d.values.map(function(dd){return dd.time.valueOf();});
+                var found = times.indexOf(time);
+                
+                //if the time point exists in data
+                if(found>=0){
+                    //save what we found to a shortcut
+                    d.now = d.values[found];
+                }else{
+
+                    //otherwise need to interpolate the point of now{}
+                    var next = bisect(times, time);
+                    var prev = next-1;
+
+                    //boundary protection
+                    if(next==times.length)next = times.length-1;
+                    if(next==0)prev = 0;
+                    
+                    //interpolate the point of now using the two known points
+                    var fraction = (time - times[prev])/(times[next] - times[prev]);
+                    indicator.forEach(function(ind){
+                        d.now[ind]=d.values[prev][ind] + fraction*(d.values[next][ind]-d.values[prev][ind]);
+                    });
+                    
+                }
+                
+            });
+            return dataNested;
+        }
     
 
     //tooltip plugin (hotfix)
