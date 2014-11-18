@@ -77,9 +77,9 @@ define([
             currentRender = this.model.show.render;
 
             // Cache needed DOM nodes
-            this.mapHolder   = d3.select('#vzb-bm-holder');
-            this.infoDisplay = d3.select('#vzb-bm-info-text');
-            this.tooltip     = d3.select('#vzb-bm-tooltip');
+            this.mapHolder   = this.element.select('#vzb-bm-holder');
+            this.infoDisplay = this.element.select('#vzb-bm-info-text');
+            this.tooltip     = this.element.select('#vzb-bm-tooltip');
 
             this.initializeMap();
         },
@@ -277,7 +277,7 @@ define([
 
         destroyD3Map: function () {
             // Remove event listeners
-            d3.selectAll('.vzb-bm-zoom').on('click.zoomClick', null);
+            this.element.select('.vzb-bm-zoom').on('click.zoomClick', null);
             svg.on('mousemove.mapMouseMove', null);
             svg = null;
             this.mapHolder.selectAll('*').remove();
@@ -479,7 +479,7 @@ define([
         },
 
         /**
-         * Highlight the elements when mobing over the svg
+         * Highlight the elements when moving over the svg
          * @param  {d3 selection} elements to highlight
          * @return {Void}
          */
@@ -492,7 +492,7 @@ define([
          * @return {Void}
          */
         removeHighlight: function () {
-            d3.selectAll('.vzb-bm-hover').classed('vzb-bm-hover', false);
+            this.element.select('.vzb-bm-hover').classed('vzb-bm-hover', false);
         },
 
         /**
@@ -645,7 +645,7 @@ define([
                 .attr('class', 'vzb-bm-zoom vzb-bm-zoom-out')
                 .text('–');
 
-            d3.selectAll('.vzb-bm-zoom').on('click.zoomClick', this.clickZoomHandler);
+            this.element.select('.vzb-bm-zoom').on('click.zoomClick', this.clickZoomHandler);
         },
 
         clickZoomHandler: function () {
@@ -714,7 +714,7 @@ define([
                 this.removeHighlight();
 
                 // Find all elements on the map that need to be highlighted
-                elements = d3.selectAll('[data-name=' + name + ']');
+                elements = this.element.select('[data-name=' + name + ']');
 
                 // There should always be at least one element
                 // but better safe than sorry
