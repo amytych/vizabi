@@ -268,6 +268,7 @@ define([
             svg.on('mousemove.mapMouseMove', null);
             svg = null;
             this.mapHolder.selectAll('*').remove();
+            mapScale = 1;
         },
 
         /**
@@ -362,9 +363,11 @@ define([
                 .append('svg:circle')
                 .attr('class', 'vzb-bm-bubble')
                 .attr('data-name', function (d) { return d.key.toLowerCase().split(' ').join('_'); })
+                .attr('cx', cx)
+                .attr('cy', cy)
                 .attr('fill', _getColor)
                 .attr('r', function (d) { return _getRadius(d) / mapScale; })
-                .style('stroke-width', function (d) { return 1.5 / mapScale; });
+                .style('stroke-width', function (d) { return bubbleStrokeWidth / mapScale; });
 
             // Remove bubbles that are no longer in the data
             bubble.exit().remove();
@@ -373,19 +376,23 @@ define([
             if (this.renderOnline()) {
                 // Position and size google maps bubbles
                 bubble
-                  .attr('width', function (d) { return (_getRadius(d) + bubbleStrokeWidth) * 2; })
-                  .attr('height', function (d) { return (_getRadius(d) + bubbleStrokeWidth) * 2; })
-                  .each(_this.transform);
+                    .transition()
+                    .duration(150)
+                    .ease('linear')
+                    .attr('width', function (d) { return cx(d) * 2; })
+                    .attr('height', function (d) { return cx(d) * 2; })
+                    .each(_this.transformBubbles);
             }
 
             bubble.select('circle')
-                .attr('cx', cx)
-                .attr('cy', cy)
                 .transition()
                 .duration(150)
+                .ease('linear')
+                .attr('cx', cx)
+                .attr('cy', cy)
                 .attr('fill', _getColor)
                 .attr('r', function (d) { return _getRadius(d) / mapScale; })
-                .style('stroke-width', function (d) { return 1.5 / mapScale; });
+                .style('stroke-width', function (d) { return bubbleStrokeWidth / mapScale; });
 
             d3.timer.flush();
         },
@@ -484,7 +491,7 @@ define([
          * @return {Void}
          */
         removeHighlight: function () {
-            this.element.select('.vzb-bm-hover').classed('vzb-bm-hover', false);
+            this.element.selectAll('.vzb-bm-hover').classed('vzb-bm-hover', false);
         },
 
         /**
@@ -628,7 +635,7 @@ define([
                 .attr('transform', 'translate(' + d3.event.translate + ')scale(' + mapScale + ')')
             .selectAll('circle')
                 .attr('r', function (d) { return _getRadius(d) / mapScale; })
-                .style('stroke-width', function (d) { return 1.5 / mapScale; });
+                .style('stroke-width', function (d) { return bubbleStrokeWidth / mapScale; });
         },
 
         setupZoomButtons: function () {
@@ -715,7 +722,7 @@ define([
                 this.removeHighlight();
 
                 // Find all elements on the map that need to be highlighted
-                elements = this.element.select('[data-name=' + name + ']');
+                elements = this.element.selectAll('[data-name=' + name + ']');
 
                 // There should always be at least one element
                 // but better safe than sorry
@@ -732,13 +739,21 @@ define([
          * @param  {Datum} d feature
          * @return {d3 Selection} transformed d3 selection
          */
-        transform: function (d) {
-             var pos = new google.maps.LatLng(d.lat, d.lng);
-             pos = projection.fromLatLngToDivPixel(pos);
+        transformBubbles: function (d) {
+            var pos = new google.maps.LatLng(d.lat, d.lng),
+                offset = _getRadius(d) + bubbleStrokeWidth;
 
-             return d3.select(this)
-                 .style('left', function (d) { return (pos.x - _getRadius(d) + bubbleStrokeWidth * 2) + 'px'; })
-                 .style('top', function (d) { return (pos.y - _getRadius(d) + bubbleStrokeWidth * 2) + 'px'; });
+            pos = projection.fromLatLngToDivPixel(pos);
+
+            return d3.select(this)
+                .transition()
+                .duration(150)
+                .ease('linear')
+                .style({
+                    'left': (pos.x - offset) + 'px',
+                    'top': (pos.y - offset) + 'px'
+                });
+                // .style('transform', 'translate(' + (pos.x - offset) + 'px, ' + (pos.y - offset) + 'px)');
         },
 
         /**
