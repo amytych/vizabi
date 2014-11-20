@@ -30,10 +30,14 @@ define([
                 component: '_gapminder/timeslider',
                 placeholder: '.vzb-tool-timeslider', //div to render
                 model: ["state.time"]
-            }, {
+            }
+            ,{
                 component: '_gapminder/buttonlist',
-                placeholder: '.vzb-tool-buttonlist'
-            }];
+                placeholder: '.vzb-tool-buttonlist',
+                model: ['state', 'data', 'language'],
+                buttons: ['colors', 'more-options']
+            }
+            ];
 
             this._super(config, options);
         },

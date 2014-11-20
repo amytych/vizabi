@@ -1,77 +1,169 @@
 //TODO: refactor this whole thing!
 
 define([
-    'jquery',
+    'd3',
     'lodash',
     'base/utils',
     'base/component'
-], function($, _, utils, Component) {
+], function(d3, _, utils, Component) {
 
-    var geo_picker;
+    //default existing buttons
+    var class_active = "vzb-active",
+        available_buttons = {
+            'find': {
+                title: "buttons/find",
+                icon: "search"
+            },
+            'more-options': {
+                title: "buttons/more_options",
+                icon: "gear"
+            },
+            'colors': {
+                title: "buttons/colors",
+                icon: "paint-brush"
+            },
+            'size': {
+                title: "buttons/size",
+                icon: "circle"
+            },
+            '_default': {
+                title: "Button",
+                icon: "asterisk"
+            }
+        };
 
     var ButtonList = Component.extend({
-        init: function(options, context) {
+
+        /**
+         * Initializes the buttonlist
+         * @param config component configuration
+         * @param context component context (parent)
+         */
+        init: function(config, context) {
             //set properties
             this.name = 'buttonlist';
             this.template = "components/_gapminder/" + this.name + "/" + this.name;
 
-            // //add sub components
-            // this.addComponent('_gapminder/picker-geo', {
-            //     data: options.data
-            // });
+            this.components = [];
+            //basic template data for buttons
+            this.template_data = {
+                buttons: []
+            };
 
-            this._super(options, context);
+            if(config.buttons && config.buttons.length > 0) {
+                //TODO: FIXME: Buttons should be a model, not config
+                this._addButtons(config.buttons);
+            }
+
+            this._super(config, context);
 
         },
 
+        /*
+         * adds buttons configuration to the components and template_data
+         * @param {Array} button_list list of buttons to be added
+         */
+        _addButtons: function(button_list) {
+
+            //add a component for each button
+            for (var i = 0; i < button_list.length; i++) {
+
+                var btn = button_list[i];
+
+                //add corresponding component
+                this.components.push({
+                    component: '_gapminder/buttonlist/dialogs/' + btn,
+                    placeholder: '.vzb-buttonlist-dialog[data-btn="' + btn + '"]',
+                    model: ['state', 'data']
+                });
+
+                //add template data
+                var d = (available_buttons[btn]) ? btn : "_default",
+                    details_btn = available_buttons[d];
+
+                details_btn.id = btn;
+                this.template_data.buttons.push(details_btn);
+
+            };
+
+        },
+
+        /*
+         * POSTRENDER:
+         * Executed once after loading
+         */
         postRender: function() {
-            var _this = this;
-            this.placeholder = utils.d3ToJquery(_this.placeholder);
+            var _this = this,
+                buttons = d3.selectAll(".vzb-buttonlist-btn");
 
-            geo_picker = this.components['picker-geo'];
+            //activate each dialog when clicking the button
+            buttons.on('click', function() {
+                var btn = d3.select(this),
+                    id = btn.attr("data-btn"),
+                    classes = btn.attr("class");
 
-            //show the picker when the correct button is pressed
-            var geo_button = this.placeholder.find('.vzb-buttonlist-geo');
-            geo_button.click(function() {
-                geo_picker.show();
+                //close if it's open
+                if (classes.indexOf(class_active) !== -1) {
+                    _this.closeDialog(id);
+                } else {
+                    _this.openDialog(id);
+                }
+            });
+
+            close_buttons = d3.selectAll("[data-click='closeDialog']");
+            close_buttons.on('click', function() {
+                _this.closeAllDialogs();
             });
         },
 
-        //make button list responsive
+        /*
+         * RESIZE:
+         * Executed whenever the container is resized
+         * Ideally, it contains only operations related to size
+         */
         resize: function() {
-            var $buttons = this.placeholder.find('.vzb-buttonlist .vzb-buttonlist-btn'),
-                $button_more = this.placeholder.find('.vzb-buttonlist .vzb-buttonlist-btn-more'),
-                offset = 30;
+            //TODO: what to do when resizing?
+        },
 
-            var size_button = {
-                width: $buttons.first().outerWidth(),
-                height: $buttons.first().outerHeight()
-            };
+        //TODO: make opening/closing a dialog via update and model
+        /*
+         * Activate a button dialog
+         * @param {String} id button id
+         */
+        openDialog: function(id) {
 
-            var size_container = {
-                    width: this.placeholder.outerWidth(),
-                    height: this.placeholder.outerHeight()
-                },
-                vertical = size_container.width < size_container.height,
-                number_buttons = $buttons.length - 1,
-                compare = (vertical) ? "height" : "width";
+            this.closeAllDialogs();
+            var btn = d3.selectAll(".vzb-buttonlist-btn[data-btn='" + id + "']"),
+                dialog = d3.selectAll(".vzb-buttonlist-dialog[data-btn='" + id + "']");
 
-            offset = size_button[compare] / 2;
+            //remove classes
+            btn.classed(class_active, true);
+            dialog.classed(class_active, true);
+        },
 
-            if ((number_buttons * size_button[compare]) <= size_container[compare] - offset) {
-                $buttons.removeClass('vzb-hidden');
-                $button_more.addClass('vzb-hidden');
-            } else {
-                var max = Math.floor((size_container[compare] - offset) / size_button[compare]) - 1,
-                    i = 0;
-                $buttons.addClass('vzb-hidden');
-                $buttons.each(function() {
-                    i++;
-                    $(this).removeClass('vzb-hidden');
-                    if (i >= max) return false;
-                });
-                $button_more.removeClass('vzb-hidden');
-            }
+        /*
+         * Closes a button dialog
+         * @param {String} id button id
+         */
+        closeDialog: function(id) {
+
+            var btn = d3.selectAll(".vzb-buttonlist-btn[data-btn='" + id + "']"),
+                dialog = d3.selectAll(".vzb-buttonlist-dialog[data-btn='" + id + "']");
+
+            //remove classes
+            btn.classed(class_active, false);
+            dialog.classed(class_active, false);
+        },
+
+        /*
+         * Close all dialogs
+         */
+        closeAllDialogs: function() {
+            //remove classes
+            var all_btns = d3.selectAll(".vzb-buttonlist-btn"),
+                all_dialogs = d3.selectAll(".vzb-buttonlist-dialog");
+            all_btns.classed(class_active, false);
+            all_dialogs.classed(class_active, false);
         }
 
     });

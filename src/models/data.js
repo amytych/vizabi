@@ -47,7 +47,7 @@ define([
          * Gets the items
          * @returns {Array} all items in the collection
          */
-        getItems: function() {
+        getItems: function(which) {
             if (this._items.length === 1) return this._items[0];
             return this._items;
         },
@@ -63,10 +63,13 @@ define([
 
         /**
          * Gets limits
+         * @param {String} attr parameter
+         * @param {Number} res result order
          * @returns {Object} time limits
          */
+        //FIX ME improve way limits are checked
         //TODO: this only works for acceptable formats for new Date()
-        getLimits: function(attr) {
+        getLimits: function(attr, res) {
             var items;
             if (_.isArray(this._items)) {
                 if (this._items.length === 1) {
@@ -81,6 +84,7 @@ define([
             } 
 
             if (!attr) attr = 'time'; //fallback in case no attr is provided
+            if (!res) res = 0; //fallback in case no order is provided
             var limits = {
                     min: 0,
                     max: 0

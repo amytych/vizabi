@@ -32,7 +32,9 @@ define([
                 model: ["state.time"]
             }, {
                 component: '_gapminder/buttonlist',
-                placeholder: '.vzb-tool-buttonlist'
+                placeholder: '.vzb-tool-buttonlist',
+                model: ['state', 'data', 'language'],
+                buttons: ['find', 'colors', 'size', 'more-options']
             }];
 
             this._super(config, options);
@@ -157,6 +159,13 @@ define([
                     //"timeFormat": state.time.format,
                     "time": "*" [time_start + "-" + time_end]
                     //"time": [state.time.start, state.time.end]
+                }
+            }, {
+                "from": "data",
+                "select": ["geo", "geo.name", "geo.region", "geo.category"],
+                "where": {
+                    "geo": ["*"],
+                    "geo.category": ["*"]
                 }
             }];
         }

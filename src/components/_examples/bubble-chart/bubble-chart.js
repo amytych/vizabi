@@ -196,6 +196,8 @@ define([
                     break;
             }
 
+            maxRadius = maxRadius * (this.model.show.size/100 || 1)
+
             //stage
             var height = parseInt(this.element.style("height"), 10) - margin.top - margin.bottom;
             var width = parseInt(this.element.style("width"), 10) - margin.left - margin.right;

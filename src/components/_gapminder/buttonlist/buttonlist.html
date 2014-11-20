@@ -3,13 +3,17 @@
 %>
 
 <div class="vzb-buttonlist">
-
-	<%
-	//todo: fix removed buttons that here (hardcoded)
+<% for(var i in buttons) {
+	var btn = buttons[i];
 	%>
-
-	<button title="More" class="vzb-buttonlist-btn vzb-buttonlist-btn-more">
-		<span class="vzb-btn-icon"><i class="fa fa-plus"></i></icon></span>
-		<span class="vzb-btn-title">More</span>
+	<button data-btn="<%- btn.id %>" class='vzb-buttonlist-btn'>
+		<i class='vzb-buttonlist-btn-icon fa fa-<%- btn.icon %>'></i>
+		<span class='vzb-buttonlist-btn-title'><%= t(btn.title) %></span>
 	</button>
+<% } %>
+<% for(var i in buttons) {
+	var btn = buttons[i];
+	%>
+	<div data-btn="<%- btn.id %>" class="vzb-buttonlist-dialog"></div>
+<% } %>
 </div>

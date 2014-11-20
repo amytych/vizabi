@@ -61,7 +61,7 @@ $(function() {
             show: {
                 geo: ["ago","arg","aus","swe"],
                 geo_category: ["country"],
-                indicator: 'gdp',
+                indicator: 'gdp_per_cap',
                 scale: 'linear',
                 unit: 1000000000,
             },
@@ -78,7 +78,7 @@ $(function() {
         //data properties
         data: {
             reader: "local-json",
-            path: "../../data-waffles/hello-world/{{LANGUAGE}}/response.json"
+            path: "../../data-waffles/examples/{{LANGUAGE}}/response.json"
         },
 
         //language properties
