@@ -78,19 +78,23 @@ $(function() {
         state: url.state || {
             show: {
                 geo: ['*'],
-                indicator: 'ebola_cases_total',
+                geo_category: ['county'],
+                indicator: ['Probable cases'],
                 scale: 'sqrt',
                 visuals: ['bubble', 'shape'],
-                render: 'online'
+                render: 'online',
+                precision: 0,
+                dataIsProcessed: false
             },
             bubble: {
                 size: 10
             },
             //time properties
             time: {
+                format: "%Y-%m-%d",
                 start: '2014-03-28',
                 end: '2014-10-18',
-                value: '2014-08-28',
+                value: '2014-08-14',
                 unit: 'day',
                 step: 1,
                 speed: 200
@@ -102,15 +106,20 @@ $(function() {
             path: '../../data-waffles/map/{{LANGUAGE}}/response.json'
         },
 
-        dataDistricts: {
-            reader: "local-json",
-            path: '../../data-waffles/map/{{LANGUAGE}}/response_1.json'
-        },
+        // data_districtsGeo: {
+        //     reader: "local-json",
+        //     path: '../../data-waffles/map/{{LANGUAGE}}/districts_geo.json'
+        // },
 
-        dataWorls: {
-            reader: "local-json",
-            path: '../../data-waffles/map/{{LANGUAGE}}/response_2.json'
-        },
+        // data_districtsLatLng: {
+        //     reader: "local-json",
+        //     path: '../../data-waffles/map/{{LANGUAGE}}/districts_latlng.json'
+        // },
+
+        // data_worldGeo: {
+        //     reader: "local-json",
+        //     path: '../../data-waffles/map/{{LANGUAGE}}/world_geo.json'
+        // },
 
         //language properties
         language: url.lang || {

@@ -67,15 +67,25 @@ define([
          */
         //TODO: this only works for acceptable formats for new Date()
         getLimits: function(attr) {
-            if (_.isArray(this._items) && this._items.length === 1) {
-                this._items = this._items[0];
-            }
+            var items;
+            if (_.isArray(this._items)) {
+                if (this._items.length === 1) {
+                    items = this._items[0];
+                // TODO: Temporary hack just to allow me to work, see here:
+                // https://github.com/Gapminder/vizabi/issues/43
+                } else if (this._items.length === 4) {
+                    items = _.find(this._items, function (d) {
+                        return _.isArray(d) && d[0].time;
+                    });
+                }
+            } 
+
             if (!attr) attr = 'time'; //fallback in case no attr is provided
             var limits = {
                     min: 0,
                     max: 0
                 },
-                filtered = _.map(this._items, function(d) {
+                filtered = _.map(items, function(d) {
                     //TODO: Move this up to readers ?
                     return new Date(d[attr]);
                 });
@@ -128,7 +138,7 @@ define([
          * /!\ the input data array has to be sorted by time (ascending)
          */
         fillGaps: function(data, indicators){
-            
+
             // 1. Let prev and next be the reference points for interpolation
             // each is a vector of length same as @indicators
             var prev = [],
@@ -168,7 +178,7 @@ define([
                     if(next[i]==null) {done[i] = true; return;}
 
                     //Finally, here goes interpolation!
-                    var fraction = (datum.time-prev[i].time)/(next[i].time-prev[i].time)                    
+                    var fraction = (datum.time-prev[i].time)/(next[i].time-prev[i].time);
                     datum[indicator] = prev[i][indicator] + ((next[i][indicator] - prev[i][indicator]) * fraction);
                     //TODO: use utils function instead?
                     //datum[indicator] = utils.interpolate(prev[i][indicator],next[i][indicator],fraction);
@@ -192,16 +202,17 @@ define([
          * the interpolation saves the result in the property .now for every input object in dataNested
          */
         interpolate: function(dataNested, time, indicators){
-
                 var bisect = d3.bisector(function(d){return d}).left;
                 time = time.valueOf();
 
                 dataNested.forEach(function(d){
+                    var times, found, next, prev, fraction;
+
                     if (d.now==null) d.now = {};
 
                     //try to find the requested time among the times we have
-                    var times = d.values.map(function(dd){return dd.time.valueOf();});
-                    var found = times.indexOf(time);
+                    times = d.values.map(function(dd){return dd.time.valueOf();});
+                    found = times.indexOf(time);
 
                     //if the time point exists in data
                     if(found>=0){
@@ -211,15 +222,15 @@ define([
                     }else{
 
                         //otherwise need to interpolate the point of now{}
-                        var next = bisect(times, time);
-                        var prev = next-1;
+                        next = bisect(times, time);
+                        prev = next-1;
 
                         //boundary protection
                         if(next==times.length)next = times.length-1;
                         if(next==0)prev = 0;
 
                         //interpolate the point of NOW using the two known reference points
-                        var fraction = (time - times[prev])/(times[next] - times[prev]);
+                        fraction = (time - times[prev])/(times[next] - times[prev]);
                         indicators.forEach(function(ind){
                             d.now[ind]=d.values[prev][ind] + fraction*(d.values[next][ind]-d.values[prev][ind]);
                         });

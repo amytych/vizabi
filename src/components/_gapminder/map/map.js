@@ -8,6 +8,7 @@ define([
 
     var mapWidth,
         mapHeight,
+        mapScale = 1,
         projection,
         path,
         zoom,
@@ -26,7 +27,7 @@ define([
     // get the vaule for the indicator
     // may also not be needed after final data set is stnadardized
     function _getValue (d) {
-        return d[indicator];
+        return d.now[indicator[0]] || 1;
     }
 
     // radiusScale is always defined before calling
@@ -81,6 +82,11 @@ define([
             this.infoDisplay = this.element.select('#vzb-bm-info-text');
             this.tooltip     = this.element.select('#vzb-bm-tooltip');
 
+            indicator   = this.model.show.indicator;
+            this.interpolator = this.model.data.interpolate;
+            this.nestedData   = this.model.data.nested;
+            this.interpolator(this.nestedData, this.model.time.value, indicator);
+
             this.initializeMap();
         },
 
@@ -95,13 +101,17 @@ define([
                 scale, extremes;
 
             indicator   = this.model.show.indicator;
+
+            this.precision    = (typeof this.model.show.precision !== 'undefined') ? this.model.show.precision : 2;
+            this.nestedData   = this.model.data.nested;
+            // this.currentData  = this.getCurrentData();
+            this.interpolator(this.nestedData, this.model.time.value, indicator);
+
             scale       = this.model.show.scale;
             extremes    = this.getExtremes();
             radiusScale = d3.scale[scale]().domain(extremes).range(radiusScaleRange);
             colorScale  = d3.scale.linear().domain(extremes).range(colorScaleRange);
             // colorScale  = d3.scale.category10().domain(extremes);
-
-            this.currentData = this.getCurrentData();
 
             // If render type has changed, the map have to be initialized again
             if (currentRender !== this.model.show.render) {
@@ -158,24 +168,6 @@ define([
         },
 
         initializeGMap: function () {
-            /** @constructor */
-            function CoordMapType(tileSize) {
-                this.tileSize = tileSize;
-            }
-
-            CoordMapType.prototype.getTile = function(coord, zoom, ownerDocument) {
-                var div = ownerDocument.createElement('div');
-                div.innerHTML = coord;
-                div.style.width = this.tileSize.width + 'px';
-                div.style.height = this.tileSize.height + 'px';
-                div.style.fontSize = '10';
-                div.style.borderStyle = 'solid';
-                div.style.borderWidth = '1px';
-                div.style.color = '#f00';
-                div.style.backgroundColor = 'rgba(255,0,0,.2)';
-                return div;
-            };
-
             map = new google.maps.Map(this.mapHolder.node(), {
                 mapTypeId: google.maps.MapTypeId.TERRAIN,
                 mapTypeControl: false,
@@ -184,16 +176,11 @@ define([
 
             this.initializeGMapOverlay();
 
-            // Insert this overlay map type as the first overlay map type at
-            // position 0. Note that all overlay map types appear on top of
-            // their parent base map.
-            // map.overlayMapTypes.insertAt(0, new CoordMapType(new google.maps.Size(256, 256)));
-
             // fit map bounds to accomodate currentData
-            map.fitBounds(this.getMapBounds(this.getCurrentData()));
+            map.fitBounds(this.getMapBounds(this.nestedData));
 
             // attach zoom events, to display additional features
-            google.maps.event.addListener(map, 'zoom_changed', this.gMapZoomHandler);
+            // google.maps.event.addListener(map, 'zoom_changed', this.gMapZoomHandler);
 
             this.mapHolder.on('mousemove.mapMouseMove', this.mapMousemoveHandler.bind(this));
 
@@ -288,14 +275,14 @@ define([
          * @return {Void}
          */
         updateD3Map: function () {
+            // Update scaling
+            svg.call(zoom.event, this);
+
             // Update districts
             this.drawDistricts();
 
             // Update bubbles
             this.drawBubbles();
-
-            // Update scaling
-            svg.call(zoom.event);
         },
 
         /**
@@ -303,8 +290,8 @@ define([
          * @return {Void}
          */
         drawWorld: function () {
-            var worldData = this.getWorldData(),
-                districtData = this.getDistrictData(),
+            var worldData = this.getWorldGeoData(),
+                districtData = this.getDistrictGeoData(),
                 combinedArea;
 
             // draw the (hidden) combined area of all districts…
@@ -349,8 +336,8 @@ define([
             } else {
                 layer = svgLayer;
                 wrapper = 'svg:g';
-                cx = function(d) { return projection([d.lon, d.lat])[0]; }
-                cy = function(d) { return projection([d.lon, d.lat])[1]; }
+                cx = function(d) { return projection([d.lng, d.lat])[0]; }
+                cy = function(d) { return projection([d.lng, d.lat])[1]; }
             }
 
             // It's a known issue, that update is called multiple times
@@ -361,7 +348,8 @@ define([
             }
 
             bubble = layer.selectAll('.vzb-bm-bubble-holder')
-                .data(this.bubblesVisible() ? this.currentData : [], function (d) { return d.geo; });
+                .data(this.bubblesVisible() ? this.nestedData : [], function (d) { return d.key; });
+
 
             // Create new bubbles
             bubbleEnter = bubble
@@ -373,8 +361,10 @@ define([
             bubbleEnter
                 .append('svg:circle')
                 .attr('class', 'vzb-bm-bubble')
-                .attr('data-name', function (d) { return d.name.toLowerCase().split(' ').join('_'); })
-                .attr('r', _getRadius);
+                .attr('data-name', function (d) { return d.key.toLowerCase().split(' ').join('_'); })
+                .attr('fill', _getColor)
+                .attr('r', function (d) { return _getRadius(d) / mapScale; })
+                .style('stroke-width', function (d) { return 1.5 / mapScale; });
 
             // Remove bubbles that are no longer in the data
             bubble.exit().remove();
@@ -391,11 +381,13 @@ define([
             bubble.select('circle')
                 .attr('cx', cx)
                 .attr('cy', cy)
+                .transition()
+                .duration(150)
                 .attr('fill', _getColor)
-                // TODO: Fix transition and zoom scaling problem for d3 bubbles
-                // .transition()
-                // .duration(150)
-                .attr('r', _getRadius);
+                .attr('r', function (d) { return _getRadius(d) / mapScale; })
+                .style('stroke-width', function (d) { return 1.5 / mapScale; });
+
+            d3.timer.flush();
         },
 
         /**
@@ -403,8 +395,8 @@ define([
          * @return {Void}
          */
         drawDistricts: function () {
-            var _this        = this,
-                districts    = [],
+            var _this     = this,
+                districts = [],
                 district;
 
             // It's a known issue, that update is called multiple times
@@ -420,7 +412,7 @@ define([
             }
 
             if (this.shapesVisible()) {
-                districts = this.getDistrictData();
+                districts = this.getDistrictGeoData();
                 districts = topojson.feature(districts, districts.objects.districts).features;
                 // Filter districts based on currentData
                 districts = _.filter(districts, function (district) { return _this.findD(district.properties.name); });
@@ -459,7 +451,7 @@ define([
 
             this.tooltip
                 .classed('vzb-hidden', false)
-                .html(d.name || d.properties.name);
+                .html(d.key || d.properties.name);
 
             // Position the tooltip at the top center of the cursor
             mouse[0] -= this.tooltip.node().offsetWidth / 2;
@@ -500,18 +492,18 @@ define([
          * @param  {Datum} d node with the data
          * @return {Void}
          */
-        showData: function (d) {
-            if (!d.name) {
+        showInfo: function (d) {
+            if (!d.key) {
               d = this.findD(d.properties.name);
             }
-            this.infoDisplay.text(_getValue(d));
+            this.infoDisplay.text(+_getValue(d).toFixed(this.precision));
         },
 
         /**
          * Reset info box
          * @return {Void}
          */
-        hideData: function () {
+        hideInfo: function () {
             this.infoDisplay.text('');
         },
 
@@ -519,9 +511,19 @@ define([
          * Get data for the districts coordinates
          * @return {Object} topoJSON with coordinates
          */
-        getDistrictData: function () {
+        getDistrictGeoData: function () {
             return _.find(this.model.data.getItems(), function (d) {
                 return d.objects && d.objects.districts;
+            });
+        },
+
+        /**
+         * Get data for the districts lat lng
+         * @return {Object} topoJSON with coordinates
+         */
+        getDistrictLatLngData: function () {
+            return _.find(this.model.data.getItems(), function (d) {
+                return _.isArray(d) && d[0].lat && d[0].lng;
             });
         },
 
@@ -529,7 +531,7 @@ define([
          * Get data for the world coordinates
          * @return {Object} topoJSON with the worls coordinates
          */
-        getWorldData: function () {
+        getWorldGeoData: function () {
             return _.find(this.model.data.getItems(), function (d) {
                 return d.objects && d.objects.countries;
             });
@@ -540,7 +542,7 @@ define([
          */
         getData: function () {
             return _.cloneDeep(_.find(this.model.data.getItems(), function (d) {
-                return _.isArray(d);
+                return _.isArray(d) && d[0].time;
             }));
         },
 
@@ -548,7 +550,7 @@ define([
          * Filter data set for current time
          */
         getCurrentData: function () {
-            var format = d3.time.format('%m/%d/%Y'),
+            var format = d3.time.format('%Y-%m-%d'),
                 time   = format(this.model.time.value);
 
             return _.filter(this.getData(), {time: time});
@@ -558,11 +560,11 @@ define([
          * Get min and max values for the data set
          */
         getExtremes: function () {
-            var data = this.getData();
+            // var data = this.getData();
 
             return [
-                d3.min(data, _getValue),
-                d3.max(data, _getValue)
+                d3.min(this.nestedData, _getValue),
+                d3.max(this.nestedData, _getValue)
             ];
         },
 
@@ -573,7 +575,7 @@ define([
          */
         getMapBounds: function (locations) {
             var bounds = new google.maps.LatLngBounds();
-            _.each(locations, function (location) { bounds.extend( new google.maps.LatLng(location.lat, location.lon) ); });
+            _.each(locations, function (location) { bounds.extend( new google.maps.LatLng(location.lat, location.lng) ); });
             return bounds;
         },
 
@@ -619,15 +621,10 @@ define([
          * @return {Void}
          */
         d3MapZoomHandler: function() {
-            var scale = d3.event.scale;
+            mapScale = d3.event.scale;
 
-            svgLayer.selectAll('.vzb-bm-bubble')
-                .attr('r', function (d) { return _getRadius(d) / scale; })
-                .style('stroke-width', function (d) { return 1.5 / scale; })
-            svgLayer.style('stroke-width', .5 / scale + 'px');
-            svgLayer.attr('transform', 'translate(' + d3.event.translate + ')scale(' + scale + ')');
-
-            // console.log(scale);
+            svgLayer.style('stroke-width', .5 / mapScale + 'px');
+            svgLayer.attr('transform', 'translate(' + d3.event.translate + ')scale(' + mapScale + ')');
         },
 
         setupZoomButtons: function () {
@@ -696,7 +693,7 @@ define([
             if (!name && hovered) {
                 this.removeHighlight();
                 this.hideTooltip();
-                this.hideData();
+                this.hideInfo();
                 hovered = undefined;
                 return;
             }
@@ -720,7 +717,7 @@ define([
                 // but better safe than sorry
                 if (elements.length) {
                   this.addHighlight(elements);
-                  this.showData(d);
+                  this.showInfo(d);
                   hovered = name;
                 }
             }
@@ -732,7 +729,7 @@ define([
          * @return {d3 Selection} transformed d3 selection
          */
         transform: function (d) {
-             var pos = new google.maps.LatLng(d.lat, d.lon);
+             var pos = new google.maps.LatLng(d.lat, d.lng);
              pos = projection.fromLatLngToDivPixel(pos);
 
              return d3.select(this)
@@ -772,7 +769,7 @@ define([
         // based on the name of feature property from geoJSON
         // Probably won't be needed in the final data set
         findD: function (name) {
-            return _.find(this.currentData, {name: name});
+            return _.find(this.nestedData, {key: name});
         }
 
     });
