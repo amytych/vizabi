@@ -54,7 +54,7 @@ define([
     }
 
 
-    var BubbleMap = Component.extend({
+    var Map = Component.extend({
 
 
         /**
@@ -264,7 +264,7 @@ define([
 
         destroyD3Map: function () {
             // Remove event listeners
-            this.element.select('.vzb-bm-zoom').on('click.zoomClick', null);
+            this.element.selectAll('.vzb-bm-zoom').on('click.zoomClick', null);
             svg.on('mousemove.mapMouseMove', null);
             svg = null;
             this.mapHolder.selectAll('*').remove();
@@ -623,8 +623,12 @@ define([
         d3MapZoomHandler: function() {
             mapScale = d3.event.scale;
 
-            svgLayer.style('stroke-width', .5 / mapScale + 'px');
-            svgLayer.attr('transform', 'translate(' + d3.event.translate + ')scale(' + mapScale + ')');
+            svgLayer
+                .style('stroke-width', .5 / mapScale + 'px')
+                .attr('transform', 'translate(' + d3.event.translate + ')scale(' + mapScale + ')')
+            .selectAll('circle')
+                .attr('r', function (d) { return _getRadius(d) / mapScale; })
+                .style('stroke-width', function (d) { return 1.5 / mapScale; });
         },
 
         setupZoomButtons: function () {
@@ -642,7 +646,7 @@ define([
                 .attr('class', 'vzb-bm-zoom vzb-bm-zoom-out')
                 .text('–');
 
-            this.element.select('.vzb-bm-zoom').on('click.zoomClick', this.clickZoomHandler);
+            this.element.selectAll('.vzb-bm-zoom').on('click.zoomClick', this.clickZoomHandler);
         },
 
         clickZoomHandler: function () {
@@ -774,6 +778,6 @@ define([
 
     });
 
-    return BubbleMap;
+    return Map;
 
 });

@@ -3,7 +3,7 @@ define([
     'base/tool'
 ], function(Tool) {
 
-    var BubbleMap = Tool.extend({
+    var Map = Tool.extend({
         init: function(config, options) {
 
             this.name = 'map';
@@ -22,14 +22,11 @@ define([
                 placeholder: '.vzb-tool-timeslider',
                 model: ['state.time']
             }, {
-                component: '_gapminder/bubble-size',
-                placeholder: '.vzb-tool-bubblesize',
-                model: ['state.bubble']
-            }, {
-                component: '_gapminder/buttonlist',
-                placeholder: '.vzb-tool-buttonlist'
-            }]
-
+                 component: '_gapminder/buttonlist',
+                 placeholder: '.vzb-tool-buttonlist',
+                 model: ['state', 'data', 'language', 'state.bubble'],
+                 buttons: ['size']
+            }];
 
             this._super(config, options);
         },
@@ -197,5 +194,5 @@ define([
         }
     });
 
-    return BubbleMap;
+    return Map;
 });
