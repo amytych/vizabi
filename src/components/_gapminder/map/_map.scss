@@ -34,7 +34,7 @@ $clrMarkerHover: darken($clrMarker, 20%);
   cursor: default;
 }
 
-.vzb-bm-geoshape-overlay {
+.vzb-bm-svg-layer {
   position: absolute;
   top: -4000px;
   left: -4000px;
@@ -66,14 +66,6 @@ $clrMarkerHover: darken($clrMarker, 20%);
   padding: 0;
   cursor: default;
   background-color: #aacafd;
-}
-
-.vzb-bm-bubble-holder, .vzb-bm-bubble {
-  position: absolute;
-}
-
-.vzb-bm-bubble-holder {
-  cursor: default;
 }
 
 .vzb-bm-bubble {
