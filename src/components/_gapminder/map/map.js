@@ -10,6 +10,7 @@ define([
         mapHeight,
         mapScale = 1,
         projection,
+        gmProjection,
         zoom,
         svg,
         indicator,
@@ -28,7 +29,7 @@ define([
 
     // radiusScale is always defined before calling
     function _getRadius (d) {
-        return radiusScale(_getValue(d));
+        return radiusScale(_getValue(d)) / mapScale;
     }
 
     // colorScale is always defined before calling
@@ -88,23 +89,23 @@ define([
 
             this.precision    = (typeof this.model.show.precision !== 'undefined') ? this.model.show.precision : 2;
             this.nestedData   = this.model.data.nested;
-            // this.currentData  = this.getCurrentData();
             this.interpolator(this.nestedData, this.model.time.value, indicator);
 
             scale       = this.model.show.scale;
             extremes    = this.getExtremes();
             radiusScale = d3.scale[scale]().domain(extremes).range(radiusScaleRange);
             colorScale  = d3.scale.linear().domain(extremes).range(colorScaleRange);
-            // colorScale  = d3.scale.category10().domain(extremes);
 
             // If render type has changed, the map have to be initialized again
             if (currentRender !== this.model.show.render) {
                 currentRender = this.model.show.render;
-                this.reinitializeMap();
+                this.destroyMap();
+                this.initializeMap();
                 return;
             }
 
-            this.updateMap();
+            this.drawDistricts();
+            this.drawBubbles();
         },
 
         /*
@@ -130,25 +131,12 @@ define([
             }
         },
 
-        updateMap: function () {
-            if (this.renderOnline()) {
-                this.updateGMap();
-            } else {
-                this.updateD3Map();
-            }
-        },
-
         destroyMap: function () {
             if (this.renderOnline()) {
                 this.destroyD3Map();
             } else {
                 this.destroyGMap();
             }
-        },
-
-        reinitializeMap: function () {
-            this.destroyMap();
-            this.initializeMap();
         },
 
         initializeGMap: function () {
@@ -164,7 +152,13 @@ define([
             map.fitBounds(this.getMapBounds(this.nestedData));
 
             this.mapHolder.on('mousemove.mapMouseMove', this.mapMousemoveHandler.bind(this));
-            this.path = d3.geo.path().projection(this.gmProjection);
+
+            projection = function (coords) {
+                coords = new google.maps.LatLng(coords[1], coords[0]);
+                coords = gmProjection.fromLatLngToDivPixel(coords);
+                return [coords.x + 4000, coords.y + 4000];
+            }
+            this.path = d3.geo.path().projection(projection);
         },
 
         destroyGMap: function () {
@@ -186,17 +180,13 @@ define([
                     .attr('class', 'vzb-bm-svg-layer');
 
                 gmOverlay.draw = function () {
-                    projection = this.getProjection();
-                    _this.updateGMap();
+                    gmProjection = this.getProjection();
+                    _this.drawDistricts();
+                    _this.drawBubbles();
                 };
             };
 
             gmOverlay.setMap(map);
-        },
-
-        updateGMap: function () {
-            this.drawDistricts();
-            this.drawBubbles();
         },
 
         /**
@@ -227,11 +217,12 @@ define([
 
             this.svgLayer = svg.append('g');
 
-            svg.call(zoom);
-
             this.drawWorld();
-
             this.setupZoomButtons();
+
+            svg
+                .call(zoom)
+                .call(zoom.event);
 
             this.update();
         },
@@ -246,16 +237,6 @@ define([
         },
 
         /**
-         * Update districts and bubbles on the map, and scale everyting accordingly
-         * @return {Void}
-         */
-        updateD3Map: function () {
-            svg.call(zoom.event, this);
-            this.drawDistricts();
-            this.drawBubbles();
-        },
-
-        /**
          * Create simple map of the world in d3
          * @return {Void}
          */
@@ -264,78 +245,74 @@ define([
                 districtData = this.getDistrictGeoData(),
                 combinedArea;
 
+            // Draw land
+            this.svgLayer.append('path')
+                .datum(topojson.merge(worldData, worldData.objects.countries.geometries))
+                .attr('class', 'vzb-bm-land')
+                .attr('d', this.path);
+
+            // Draw countries borders
+            this.svgLayer.append('path')
+                .datum(topojson.mesh(worldData, worldData.objects.countries, function(a, b) { return a !== b; }))
+                .attr('class', 'vzb-bm-boundary')
+                .attr('d', this.path);
+
             // draw the (hidden) combined area of all districts…
-            combinedArea = this.svgLayer.insert('path', ':first-child')
+            combinedArea = this.svgLayer.append('path')
                 .datum(topojson.merge(districtData, districtData.objects.districts.geometries))
                 .attr('class', 'vzb-bm-area')
                 .attr('d', this.path);
 
             // and zoom to it all
             this.zoomTo(combinedArea.data()[0]);
-
-            // Draw countries borders
-            this.svgLayer.insert('path', ':first-child')
-                .datum(topojson.mesh(worldData, worldData.objects.countries, function(a, b) { return a !== b; }))
-                .attr('class', 'vzb-bm-boundary')
-                .attr('d', this.path);
-
-            // Draw land
-            this.svgLayer.insert('path', ':first-child')
-                .datum(topojson.merge(worldData, worldData.objects.countries.geometries))
-                .attr('class', 'vzb-bm-land')
-                .attr('d', this.path);
         },
 
         drawBubbles: function () {
             var _this = this,
                 bubble, cx, cy;
 
-            // It's a known issue, that update is called multiple times
-            // sometimes it may be called before google map is initialized with projection
+            // Sometimes it may be called before google map is initialized with projection
             // Prevent drawing districts in that case
-            if (this.renderOnline() && typeof projection !== 'object') {
-               return; 
-            }
-
-            // For the same reason this.svgLayer may not be available yet
-            if (!this.svgLayer) {
+            if (this.renderOnline() && !gmProjection) {
                 return;
-            }
-
-            // Define differences between d3 map and google map
-            if (this.renderOnline()) {
-                cx = function (d) { return _this.gmProjection([d.lng, d.lat])[0]; };
-                cy = function (d) { return _this.gmProjection([d.lng, d.lat])[1]; };
-            } else {
-                cx = function (d) { return projection([d.lng, d.lat])[0]; };
-                cy = function (d) { return projection([d.lng, d.lat])[1]; };
             }
 
             bubble = this.svgLayer.selectAll('.vzb-bm-bubble')
                 .data(this.bubblesVisible() ? this.nestedData : [], function (d) { return d.key; });
 
-            // Add a circle.
+            // Create new bubble
             bubble
                 .enter().append('svg:circle')
                 .attr('class', 'vzb-bm-bubble')
                 .attr('data-name', function (d) { return d.key.toLowerCase().split(' ').join('_'); })
                 .attr('fill', _getColor)
-                .attr('r', function (d) { return _getRadius(d) / mapScale; })
-                .style('stroke-width', function (d) { return bubbleStroke / mapScale; });
+                .attr('r', _getRadius);
+
 
             // Remove bubbles that are no longer in the data
             bubble.exit().remove();
 
+            // Update exisitin bubbles
             bubble
-                .attr('cx', cx)
-                .attr('cy', cy)
+                .each(this.positionBubbles)
+                .style('stroke-width', bubbleStroke / mapScale)
                 .transition()
                 .duration(150)
                 .attr('fill', _getColor)
-                .attr('r', function (d) { return _getRadius(d) / mapScale; })
-                .style('stroke-width', function (d) { return bubbleStroke / mapScale; });
+                .attr('r', _getRadius);
+
 
             d3.timer.flush();
+        },
+
+        positionBubbles: function (d) {
+            var pos = projection([d.lng, d.lat]);
+
+            return d3.select(this)
+                // .attr('cx', 4100)
+                // .attr('cy', 4100);
+                .attr('cx', pos[0])
+                .attr('cy', pos[1]);
         },
 
         /**
@@ -347,16 +324,10 @@ define([
                 districts = [],
                 district;
 
-            // It's a known issue, that update is called multiple times
-            // sometimes it may be called before google map is initialized with projection
+            // Sometimes it may be called before google map is initialized with projection
             // Prevent drawing districts in that case
-            if (this.renderOnline() && typeof projection !== 'object') {
+            if (this.renderOnline() && !gmProjection) {
                return; 
-            }
-
-            // For the same reason this.svgLayer may not be available yet
-            if (!this.svgLayer) {
-                return;
             }
 
             if (this.shapesVisible()) {
@@ -371,7 +342,7 @@ define([
 
             // Create new districts
             district
-                .enter().insert('svg:path', '.vzb-bm-bubble')
+                .enter().append('svg:path')
                 .attr('class', 'vzb-bm-district')
                 .attr('data-name', function (d) { return d.properties.name.toLowerCase().split(' ').join('_'); });
 
@@ -568,7 +539,7 @@ define([
                 .style('stroke-width', .5 / mapScale + 'px')
                 .attr('transform', 'translate(' + d3.event.translate + ')scale(' + mapScale + ')')
             .selectAll('circle')
-                .attr('r', function (d) { return _getRadius(d) / mapScale; })
+                .attr('r', _getRadius)
                 .style('stroke-width', function (d) { return bubbleStroke / mapScale; });
         },
 
@@ -652,22 +623,6 @@ define([
                     this.hovered = name;
                 }
             }
-        },
-
-        /**
-         * Turn the google map overlay projection into a d3 projection
-         * SVG holding districts/bubbles on the map is 8000x8000 offseted by -4000px top/left
-         * it has to be like that to accomodate high zoom levels
-         * otherwise districts/bubbles may be truncated when zooming.
-         * Pixel coords need to take this into account
-         * @param  {Array} coords Lat and lng
-         * @return {Array} Pixel coordinates
-         */
-        gmProjection: function (coords) {
-            coords = new google.maps.LatLng(coords[1], coords[0]);
-            coords = projection.fromLatLngToDivPixel(coords);
-
-            return [coords.x + 4000, coords.y + 4000];
         },
 
         /**

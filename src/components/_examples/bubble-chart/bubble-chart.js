@@ -49,8 +49,6 @@ define([
             this.yearEl = this.graph.select('.vzb-bc-year');
             this.bubbleContainer = this.graph.select('.vzb-bc-bubbles');
             this.bubbles = null;
-
-            console.log(this);
         },
 
 
