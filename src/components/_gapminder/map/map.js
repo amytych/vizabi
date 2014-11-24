@@ -342,7 +342,7 @@ define([
 
             // Create new districts
             district
-                .enter().append('svg:path')
+                .enter().insert('svg:path', '.vzb-bm-bubble')
                 .attr('class', 'vzb-bm-district')
                 .attr('data-name', function (d) { return d.properties.name.toLowerCase().split(' ').join('_'); });
 
