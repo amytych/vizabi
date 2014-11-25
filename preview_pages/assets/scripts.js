@@ -108,11 +108,11 @@ function showState(state, id) {
 
 function formatDate(date, unit) {
     var timeFormats = {
-        "year"  : d3.time.format("%Y"),
-        "month" : d3.time.format("%Y-%m"),
-        "week"  : d3.time.format("%Y-W%W"),
-        "day"   : d3.time.format("%Y-%m-%d"),
-        "hour"  : d3.time.format("%Y-%m-%d %H"),
+        "year": d3.time.format("%Y"),
+        "month": d3.time.format("%Y-%m"),
+        "week": d3.time.format("%Y-W%W"),
+        "day": d3.time.format("%Y-%m-%d"),
+        "hour": d3.time.format("%Y-%m-%d %H"),
         "minute": d3.time.format("%Y-%m-%d %H:%M"),
         "second": d3.time.format("%Y-%m-%d %H:%M:%S")
     };
@@ -219,10 +219,21 @@ DropDown.prototype = {
 }
 
 function viewOnGithub() {
-    var github_base = "https://github.com/Gapminder/vizabi/tree/develop/src/tools/",
-        tool_path = window.location.pathname.substring(window.location.pathname.indexOf("preview_pages/") + 14 , window.location.pathname.indexOf(".html"));
-        
-    window.open(github_base + tool_path,'_blank');
+    var url = window.location.pathname,
+        branch,
+        github_base = 'https://github.com/Gapminder/vizabi/tree/',
+        github_tools_prepend = '/src/tools/',
+        tool_path = url.substring(url.indexOf("preview_pages/") + 14, url.indexOf(".html"));
+
+    // TODO: In development, there is no info about the branch in the URL. Can be improved by looking into https://github.com/notatestuser/gift
+    if (url.indexOf('dist') >= 0 || url.indexOf('develop') >= 0) {
+        branch = 'develop';
+    }
+    else {
+        branch = url.substring(url.indexOf('feature'), url.indexOf('/preview_pages'));
+    }
+
+    window.open(github_base + branch + github_tools_prepend + tool_path, '_blank');
 }
 
 parseURL();
