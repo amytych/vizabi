@@ -13,30 +13,7 @@ define([
         gmProjection,
         zoom,
         svg,
-        indicator,
-        unit,
-        radiusScale,
-        colorScale,
-        currentRender,
         bubbleStroke = 1.5;
-
-    // Some handy helpers and getters
-
-    // get the vaule for the indicator
-    // may also not be needed after final data set is stnadardized
-    function _getValue (d) {
-        return d.now[indicator[0]] || 1;
-    }
-
-    // radiusScale is always defined before calling
-    function _getRadius (d) {
-        return radiusScale(_getValue(d)) / mapScale;
-    }
-
-    // colorScale is always defined before calling
-    function _getColor (d) {
-        return colorScale(_getValue(d));
-    }
 
     var Map = Component.extend({
 
@@ -47,17 +24,15 @@ define([
          * @param context component context (parent)
          */
         init: function(config, context) {
-            var _this = this;
-
             this.name = 'map';
             this.template = 'components/_gapminder/' + this.name + '/' + this.name;
             this._super(config, context);
 
-            this.model.data.on("load_end", function() {
-                if (!_this.model.show.dataIsProcessed) {
-                    _this.processNestedData();
-                }
-            });
+            // TODO: This is not ideal, but it's currently the only way to
+            // make sure that data processing is done after new data was loaded.
+            // Previously it was called in toolModelValidation method, but there
+            // the proper data set was not guaranteed.
+            this.model.data.on("load_end", this.processNestedData.bind(this));
         },
 
         /*
@@ -68,7 +43,7 @@ define([
         postRender: function() {
             var _this = this;
             // Needed for change of the rendering mode
-            currentRender = this.model.show.render;
+            this.currentRender = this.model.show.render;
 
             // Cache needed DOM nodes
             this.mapHolder   = this.element.select('#vzb-bm-holder');
@@ -77,10 +52,10 @@ define([
 
             this.hovered = undefined;
 
-            indicator   = this.model.show.indicator;
+            this.indicator   = this.model.show.indicator;
             this.interpolator = this.model.data.interpolate;
             this.nestedData   = this.model.data.nested;
-            this.interpolator(this.nestedData, this.model.time.value, indicator);
+            this.interpolator(this.nestedData, this.model.time.value, this.indicator);
 
             this.initializeMap();
         },
@@ -95,22 +70,21 @@ define([
                 colorScaleRange  = ['#7fb5f5', '#d70927'],
                 scale, extremes;
 
-            indicator   = this.model.show.indicator;
-            unit        = this.model.show.unit;
+            this.indicator   = this.model.show.indicator;
+            this.unit        = this.model.show.unit;
 
             this.precision    = (typeof this.model.show.precision !== 'undefined') ? this.model.show.precision : 2;
             this.nestedData   = this.model.data.nested;
-            console.log(this.nestedData);
-            this.interpolator(this.nestedData, this.model.time.value, indicator);
+            this.interpolator(this.nestedData, this.model.time.value, this.indicator);
 
             scale       = this.model.show.scale;
             extremes    = this.getExtremes();
-            radiusScale = d3.scale[scale]().domain(extremes).range(radiusScaleRange);
-            colorScale  = d3.scale.linear().domain(extremes).range(colorScaleRange);
+            this.radiusScale = d3.scale[scale]().domain(extremes).range(radiusScaleRange);
+            this.colorScale  = d3.scale.linear().domain(extremes).range(colorScaleRange);
 
             // If render type has changed, the map have to be initialized again
-            if (currentRender !== this.model.show.render) {
-                currentRender = this.model.show.render;
+            if (this.currentRender !== this.model.show.render) {
+                this.currentRender = this.model.show.render;
                 this.destroyMap();
                 this.initializeMap();
                 return;
@@ -290,15 +264,15 @@ define([
             }
 
             bubble = this.svgLayer.selectAll('.vzb-bm-bubble')
-                .data(this.bubblesVisible() ? this.nestedData : [], function (d) { return d.key; });
+                .data(this.bubblesVisible() ? this.nestedData : [], function (d) { return _this.getSlugKey(d.key); });
 
             // Create new bubble
             bubble
                 .enter().append('svg:circle')
                 .attr('class', 'vzb-bm-bubble')
-                .attr('data-name', function (d) { return d.key.toLowerCase().split(' ').join('_'); })
-                .attr('fill', _getColor)
-                .attr('r', _getRadius);
+                .attr('data-name', function (d) { return _this.getSlugKey(d.key); })
+                .attr('fill', this.getColor.bind(this))
+                .attr('r', this.getRadius.bind(this));
 
 
             // Remove bubbles that are no longer in the data
@@ -310,8 +284,8 @@ define([
                 .style('stroke-width', bubbleStroke / mapScale)
                 .transition()
                 .duration(150)
-                .attr('fill', _getColor)
-                .attr('r', _getRadius);
+                .attr('fill', this.getColor.bind(this))
+                .attr('r', this.getRadius.bind(this));
 
 
             d3.timer.flush();
@@ -350,13 +324,13 @@ define([
             }
 
             shape = this.svgLayer.selectAll('.vzb-bm-shape')
-                .data(shapes, function (d) { return 'vzb-bm-shape-' + d.properties.name.toLowerCase().split(' ').join('_'); });
+                .data(shapes, function (d) { return 'vzb-bm-shape-' + _this.getSlugKey(d.properties.name); });
 
             // Create new shapes
             shape
                 .enter().insert('svg:path', '.vzb-bm-bubble')
                 .attr('class', 'vzb-bm-shape')
-                .attr('data-name', function (d) { return d.properties.name.toLowerCase().split(' ').join('_'); });
+                .attr('data-name', function (d) { return _this.getSlugKey(d.properties.name); });
 
             // Remove shapes that are no longer in the data
             shape.exit().remove();
@@ -366,7 +340,7 @@ define([
                 .attr('d', this.path)
                 .attr('fill', function (d) {
                     var d = _this.findD(d.properties.name),
-                    color = d ? _getColor(d) : 'transparent';
+                    color = d ? _this.getColor(d) : 'transparent';
                     return color;
                 });
         },
@@ -427,7 +401,7 @@ define([
             if (!d.key) {
               d = this.findD(d.properties.name);
             }
-            this.infoDisplay.text((+_getValue(d) / unit).toFixed(this.precision));
+            this.infoDisplay.text((+this.getValue(d) / this.unit).toFixed(this.precision));
         },
 
         /**
@@ -494,8 +468,8 @@ define([
             // var data = this.getData();
 
             return [
-                d3.min(this.nestedData, _getValue),
-                d3.max(this.nestedData, _getValue)
+                d3.min(this.nestedData, this.getValue.bind(this)),
+                d3.max(this.nestedData, this.getValue.bind(this))
             ];
         },
 
@@ -551,7 +525,7 @@ define([
                 .style('stroke-width', .5 / mapScale + 'px')
                 .attr('transform', 'translate(' + d3.event.translate + ')scale(' + mapScale + ')')
             .selectAll('circle')
-                .attr('r', _getRadius)
+                .attr('r', this.getRadius.bind(this))
                 .style('stroke-width', function (d) { return bubbleStroke / mapScale; });
         },
 
@@ -672,14 +646,41 @@ define([
             return _.find(this.nestedData, {key: name});
         },
 
+        getSlugKey: function (key) {
+            return key.toLowerCase().replace(/([\s\/\,\!\\\^\$\{\}\[\]\(\)\.\*\+\?\|\<\>\-\&])/g,"-");
+        },
+
+        // get the vaule for the indicator
+        // may also not be needed after final data set is stnadardized
+        getValue: function (d) {
+            return d.now[this.indicator[0]] || 1;
+        },
+
+        // radiusScale is always defined before calling
+        getRadius: function (d) {
+            return this.radiusScale(this.getValue(d)) / mapScale;
+        },
+
+        // colorScale is always defined before calling
+        getColor: function (d) {
+            return this.colorScale(this.getValue(d));
+        },
+
         processNestedData: function () {
+            // console.log(this);
             console.time('Process Nested Data');
             var model     = this.model,
                 data      = model.data,
                 indicator = model.show.indicator,
                 items     = this.getData(),
                 latlngs   = this.getShapeLatLngData(),
+                datMin, dateMax,
                 minValue, maxValue, nested;
+
+            // Do nothing, if the data is processed already
+            if (model.show.dataIsProcessed) {
+                return;
+            }
 
             // save max and min values to the model (each is a vector for all indicators)
             minValue = indicator.map(function(ind) {
@@ -690,6 +691,16 @@ define([
             });
             data.setItems("minValue", minValue);
             data.setItems("maxValue", maxValue);
+
+            dateMin = data.getLimits('time').min;
+            dateMax = data.getLimits('time').max;
+
+            if (model.time.start < dateMin) {
+                model.time.start = dateMin;
+            }
+            if (model.time.end > dateMax) {
+                model.time.end = dateMax;
+            }
 
             // group data points by geo.name
             nested = d3.nest()
@@ -714,7 +725,6 @@ define([
                             .filter(function (l) { return l.time == t; })
                             .forEach(function (dd) {
                                 indicator.forEach(function (ind) {
-                                    console.log(dd[ind]);
                                     if (dd[ind]) merged[ind] = +dd[ind];
                                 });
                             });

@@ -10,14 +10,10 @@
         <div id="dropdown-size" class="wrapper-dropdown" tabindex="1">
             <span>Size</span>
             <ul class="dropdown">
-                <li><a onclick="phoneSize('map')">Mobile Portrait</a>
-                </li>
-                <li><a onclick="phoneSize('map', 'landscape')">Mobile Landscape</a>
-                </li>
-                <li><a onclick="randomSize('map')">Random Size</a>
-                </li>
-                <li><a onclick="fullSize('map')">Full Screen</a>
-                </li>
+                <li><a onclick="phoneSize('map')">Mobile Portrait</a></li>
+                <li><a onclick="phoneSize('map', 'landscape')">Mobile Landscape</a></li>
+                <li><a onclick="randomSize('map')">Random Size</a></li>
+                <li><a onclick="fullSize('map')">Full Screen</a></li>
             </ul>
         </div>
 
@@ -28,22 +24,17 @@
         <div id="dropdown-options" class="wrapper-dropdown" tabindex="1">
             <span>OPTIONS</span>
             <ul class="dropdown">
-                <li><a onclick="worldState()">WORLD</a>
-                </li>
-                <li><a onclick="ebolaState()">EBOLA</a>
-                </li>
-                <!-- <li><a onclick="changeIndicator()">LEX (SWE, NOR - 2007)</a> -->
-                </li>
+                <li><a onclick="showEbolaCases()">Ebola cases</a></li>
+                <li><a onclick="showWorldPop()">World population</a></li>
+                <!-- <li><a onclick="changeIndicator()">LEX (SWE, NOR - 2007)</a> --></li>
             </ul>
         </div>
 
         <div id="dropdown-language" class="wrapper-dropdown" tabindex="1">
             <span>Language</span>
             <ul class="dropdown">
-                <li><a onclick="setLanguage('map','en')">English</a>
-                </li>
-                <li><a onclick="setLanguage('map','pt')">Portuguese</a>
-                </li>
+                <li><a onclick="setLanguage('map','en')">English</a></li>
+                <li><a onclick="setLanguage('map','pt')">Portuguese</a></li>
             </ul>
         </div>
     </div>
@@ -82,7 +73,7 @@ $(function() {
                     indicator: ['pop'],
                     unit: 1000000,
                     scale: 'sqrt',
-                    visuals: ['bubble'],
+                    visuals: ['bubble', 'shape'],
                     render: 'offline',
                     precision: 2,
                     dataIsProcessed: false
@@ -100,7 +91,7 @@ $(function() {
                     format: "%Y"
                 }
             },
-            data: {
+        data: {
                 reader: "local-json",
                 path: "../../data-waffles/map/{{LANGUAGE}}/world/response.json"
         },
@@ -149,7 +140,7 @@ $(function() {
 });
 
 
-function ebolaState() {
+function showEbolaCases() {
     var newOption = {
         state: {
             show: {
@@ -200,18 +191,18 @@ function ebolaState() {
     myVizabi.setOptions(newOption);
 }
 
-function worldState() {
+function showWorldPop() {
     var newOption = {
         state: {
             show: {
                 geo: ['*'],
                 geo_category: ['country'],
                 indicator: ['pop'],
-                unit: 1,
+                unit: 1000000,
                 scale: 'sqrt',
-                visuals: ['bubble'],
+                visuals: ['bubble', 'shape'],
                 render: 'offline',
-                precision: 0,
+                precision: 2,
                 dataIsProcessed: false
             },
             bubble: {
@@ -225,9 +216,14 @@ function worldState() {
                 speed: 100,
                 value: 1995,
                 format: "%Y"
-            },
+            }
+        },
+        data: {
+                reader: "local-json",
+                path: "../../data-waffles/map/{{LANGUAGE}}/world/response.json"
         },
 
+        //language properties
         language: url.lang || {
             id: "en",
             strings: {
@@ -238,11 +234,6 @@ function worldState() {
                     "timeslider/pause": "Pause"
                 }
             }
-        },
-
-        data: {
-            reader: "local-json",
-            path: "../../data-waffles/map/{{LANGUAGE}}/world/response.json"
         }
     };
     myVizabi.setOptions(newOption);

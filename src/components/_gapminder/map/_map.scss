@@ -22,7 +22,7 @@ $clrMarkerHover: darken($clrMarker, 20%);
     stroke-opacity: .5;
     fill-opacity: .5;
     cursor: default;
-    transition: fill-opacity .1s ease-in;
+    // transition: fill-opacity .1s ease-in;
 }
 
 .vzb-bm-shape.vzb-bm-hover {
@@ -68,7 +68,7 @@ $clrMarkerHover: darken($clrMarker, 20%);
   // fill: $clrMarker;
   stroke: $clrMarkerStroke;
   stroke-width: 1.5px;
-  transition: stroke .1s ease-in;
+  // transition: stroke .1s ease-in;
 }
 
 .vzb-bm-hover {
