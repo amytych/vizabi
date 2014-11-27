@@ -192,6 +192,8 @@ define([
                 });
             });
 
+            // console.log(data);
+
             return data;
         },
         
@@ -206,46 +208,44 @@ define([
          * the interpolation saves the result in the property .now for every input object in dataNested
          */
         interpolate: function(dataNested, time, indicators){
-                var bisect = d3.bisector(function(d){return d}).left;
-                time = time.valueOf();
+            var bisect = d3.bisector(function(d){return d}).left;
+            time = time.valueOf();
 
-                dataNested.forEach(function(d){
-                    var times, found, next, prev, fraction;
+            dataNested.forEach(function(d){
+                var times, found, next, prev, fraction;
 
-                    if (d.now==null) d.now = {};
+                if (d.now==null) d.now = {};
 
-                    //try to find the requested time among the times we have
-                    times = d.values.map(function(dd){return dd.time.valueOf();});
-                    found = times.indexOf(time);
+                //try to find the requested time among the times we have
+                times = d.values.map(function(dd){return dd.time.valueOf();});
+                found = times.indexOf(time);
 
-                    //if the time point exists in data
-                    if(found>=0){
+                //if the time point exists in data
+                if(found>=0){
 
-                        //save what we found to a shortcut
-                        d.now = d.values[found];
-                    }else{
+                    //save what we found to a shortcut
+                    d.now = d.values[found];
+                }else{
 
-                        //otherwise need to interpolate the point of now{}
-                        next = bisect(times, time);
-                        prev = next-1;
+                    //otherwise need to interpolate the point of now{}
+                    next = bisect(times, time);
+                    prev = next-1;
 
-                        //boundary protection
-                        if(next==times.length)next = times.length-1;
-                        if(next==0)prev = 0;
+                    //boundary protection
+                    if(next==times.length)next = times.length-1;
+                    if(next==0)prev = 0;
 
-                        //interpolate the point of NOW using the two known reference points
-                        fraction = (time - times[prev])/(times[next] - times[prev]);
-                        indicators.forEach(function(ind){
-                            d.now[ind]=d.values[prev][ind] + fraction*(d.values[next][ind]-d.values[prev][ind]);
-                        });
+                    //interpolate the point of NOW using the two known reference points
+                    fraction = (time - times[prev])/(times[next] - times[prev]);
+                    indicators.forEach(function(ind){
+                        d.now[ind]=d.values[prev][ind] + fraction*(d.values[next][ind]-d.values[prev][ind]);
+                    });
 
-                    }
+                }
 
-                });
-                return dataNested;
-            }
-       
-            
+            });
+            return dataNested;
+        }
     });
 
     return DataModel;

@@ -17,7 +17,7 @@ $clrMarkerHover: darken($clrMarker, 20%);
     fill: transparent;
 }
 
-.vzb-bm-district {
+.vzb-bm-shape {
     stroke: rgba(0,0,0,.5);
     stroke-opacity: .5;
     fill-opacity: .5;
@@ -25,13 +25,8 @@ $clrMarkerHover: darken($clrMarker, 20%);
     transition: fill-opacity .1s ease-in;
 }
 
-.vzb-bm-district.vzb-bm-hover {
+.vzb-bm-shape.vzb-bm-hover {
   fill-opacity: 1;
-}
-
-.vzb-bm-gm-district {
-  position: absolute;
-  cursor: default;
 }
 
 .vzb-bm-svg-layer {

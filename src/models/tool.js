@@ -36,9 +36,9 @@ define([
             //constructor is similar to model
             this._super(values, this._intervals, binds);
 
-            //load whenever show or language changes
+            //load whenever show, language or data changes
             var _this = this;
-            this.on(["change:state:show", "change:language"], function() {
+            this.on(["change:state:show", "change:language", "change:data:reader", "change:data:path"], function() {
                 _this.load().done(function() {
                     _this.trigger("reloaded");
                 });

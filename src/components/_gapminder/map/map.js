@@ -14,6 +14,7 @@ define([
         zoom,
         svg,
         indicator,
+        unit,
         radiusScale,
         colorScale,
         currentRender,
@@ -46,9 +47,17 @@ define([
          * @param context component context (parent)
          */
         init: function(config, context) {
+            var _this = this;
+
             this.name = 'map';
             this.template = 'components/_gapminder/' + this.name + '/' + this.name;
             this._super(config, context);
+
+            this.model.data.on("load_end", function() {
+                if (!_this.model.show.dataIsProcessed) {
+                    _this.processNestedData();
+                }
+            });
         },
 
         /*
@@ -57,6 +66,7 @@ define([
          * Ideally, it contains instantiations related to template
          */
         postRender: function() {
+            var _this = this;
             // Needed for change of the rendering mode
             currentRender = this.model.show.render;
 
@@ -86,9 +96,11 @@ define([
                 scale, extremes;
 
             indicator   = this.model.show.indicator;
+            unit        = this.model.show.unit;
 
             this.precision    = (typeof this.model.show.precision !== 'undefined') ? this.model.show.precision : 2;
             this.nestedData   = this.model.data.nested;
+            console.log(this.nestedData);
             this.interpolator(this.nestedData, this.model.time.value, indicator);
 
             scale       = this.model.show.scale;
@@ -104,7 +116,7 @@ define([
                 return;
             }
 
-            this.drawDistricts();
+            this.drawShapes();
             this.drawBubbles();
         },
 
@@ -181,7 +193,7 @@ define([
 
                 gmOverlay.draw = function () {
                     gmProjection = this.getProjection();
-                    _this.drawDistricts();
+                    _this.drawShapes();
                     _this.drawBubbles();
                 };
             };
@@ -190,7 +202,7 @@ define([
         },
 
         /**
-         * Build the d3 world map and draw the districts
+         * Build the d3 world map and draw the shapes
          * @return {Void}
          */
         initializeD3Map: function () {
@@ -242,7 +254,7 @@ define([
          */
         drawWorld: function () {
             var worldData = this.getWorldGeoData(),
-                districtData = this.getDistrictGeoData(),
+                shapeData = this.getShapeGeoData(),
                 combinedArea;
 
             // Draw land
@@ -257,14 +269,14 @@ define([
                 .attr('class', 'vzb-bm-boundary')
                 .attr('d', this.path);
 
-            // draw the (hidden) combined area of all districts…
-            combinedArea = this.svgLayer.append('path')
-                .datum(topojson.merge(districtData, districtData.objects.districts.geometries))
-                .attr('class', 'vzb-bm-area')
-                .attr('d', this.path);
+            // // draw the (hidden) combined area of all shapes…
+            // combinedArea = this.svgLayer.append('path')
+            //     .datum(topojson.merge(shapeData, shapeData.objects.shapes.geometries))
+            //     .attr('class', 'vzb-bm-area')
+            //     .attr('d', this.path);
 
-            // and zoom to it all
-            this.zoomTo(combinedArea.data()[0]);
+            // // and zoom to it all
+            // this.zoomTo(combinedArea.data()[0]);
         },
 
         drawBubbles: function () {
@@ -272,7 +284,7 @@ define([
                 bubble, cx, cy;
 
             // Sometimes it may be called before google map is initialized with projection
-            // Prevent drawing districts in that case
+            // Prevent drawing shapes in that case
             if (this.renderOnline() && !gmProjection) {
                 return;
             }
@@ -316,41 +328,41 @@ define([
         },
 
         /**
-         * Draw districts on the map, google map or offline map
+         * Draw shapes on the map, google map or offline map
          * @return {Void}
          */
-        drawDistricts: function () {
+        drawShapes: function () {
             var _this     = this,
-                districts = [],
-                district;
+                shapes = [],
+                shape;
 
             // Sometimes it may be called before google map is initialized with projection
-            // Prevent drawing districts in that case
+            // Prevent drawing shapes in that case
             if (this.renderOnline() && !gmProjection) {
                return; 
             }
 
             if (this.shapesVisible()) {
-                districts = this.getDistrictGeoData();
-                districts = topojson.feature(districts, districts.objects.districts).features;
-                // Filter districts based on currentData
-                districts = _.filter(districts, function (district) { return _this.findD(district.properties.name); });
+                shapes = this.getShapeGeoData();
+                shapes = topojson.feature(shapes, shapes.objects.shapes).features;
+                // Filter shapes based on currentData
+                shapes = _.filter(shapes, function (shape) { return _this.findD(shape.properties.name); });
             }
 
-            district = this.svgLayer.selectAll('.vzb-bm-district')
-                .data(districts, function (d) { return 'vzb-bm-district-' + d.properties.name.toLowerCase().split(' ').join('_'); });
+            shape = this.svgLayer.selectAll('.vzb-bm-shape')
+                .data(shapes, function (d) { return 'vzb-bm-shape-' + d.properties.name.toLowerCase().split(' ').join('_'); });
 
-            // Create new districts
-            district
+            // Create new shapes
+            shape
                 .enter().insert('svg:path', '.vzb-bm-bubble')
-                .attr('class', 'vzb-bm-district')
+                .attr('class', 'vzb-bm-shape')
                 .attr('data-name', function (d) { return d.properties.name.toLowerCase().split(' ').join('_'); });
 
-            // Remove districts that are no longer in the data
-            district.exit().remove();
+            // Remove shapes that are no longer in the data
+            shape.exit().remove();
 
-            // Update exisiting districts
-            district
+            // Update exisiting shapes
+            shape
                 .attr('d', this.path)
                 .attr('fill', function (d) {
                     var d = _this.findD(d.properties.name),
@@ -415,7 +427,7 @@ define([
             if (!d.key) {
               d = this.findD(d.properties.name);
             }
-            this.infoDisplay.text(+_getValue(d).toFixed(this.precision));
+            this.infoDisplay.text((+_getValue(d) / unit).toFixed(this.precision));
         },
 
         /**
@@ -427,20 +439,20 @@ define([
         },
 
         /**
-         * Get data for the districts coordinates
+         * Get data for the shapes coordinates
          * @return {Object} topoJSON with coordinates
          */
-        getDistrictGeoData: function () {
+        getShapeGeoData: function () {
             return _.find(this.model.data.getItems(), function (d) {
-                return d.objects && d.objects.districts;
+                return d.objects && d.objects.shapes;
             });
         },
 
         /**
-         * Get data for the districts lat lng
+         * Get data for the shapes lat lng
          * @return {Object} topoJSON with coordinates
          */
-        getDistrictLatLngData: function () {
+        getShapeLatLngData: function () {
             return _.find(this.model.data.getItems(), function (d) {
                 return _.isArray(d) && d[0].lat && d[0].lng;
             });
@@ -658,6 +670,85 @@ define([
         // Probably won't be needed in the final data set
         findD: function (name) {
             return _.find(this.nestedData, {key: name});
+        },
+
+        processNestedData: function () {
+            console.time('Process Nested Data');
+            var model     = this.model,
+                data      = model.data,
+                indicator = model.show.indicator,
+                items     = this.getData(),
+                latlngs   = this.getShapeLatLngData(),
+                minValue, maxValue, nested;
+
+            // save max and min values to the model (each is a vector for all indicators)
+            minValue = indicator.map(function(ind) {
+             return d3.min(items, function(d) {return +d[ind];});
+            });
+            maxValue = indicator.map(function(ind) {
+             return d3.max(items, function(d) {return +d[ind];});
+            });
+            data.setItems("minValue", minValue);
+            data.setItems("maxValue", maxValue);
+
+            // group data points by geo.name
+            nested = d3.nest()
+                .key(function (d) {return d["adm1.name"] || d["geo.name"]})
+                .rollup(function (leaves) {
+                    var collect = [];
+                    var times = _.uniq(leaves.map(function (d) { return d.time; })).sort(d3.ascending);
+
+                    //merge different indicators with the same time points
+                    //this will not be needed when i will 
+                    //TODO: connect new data format
+                    times.forEach(function(t){
+                        var merged = {};
+                        merged.name = leaves[0]["adm1.name"] || leaves[0]["geo.name"]; 
+                        merged.category = (leaves[0]["geo.category"]) ? leaves[0]["geo.category"][0] : 'county';
+                        // merged.region = merged.name.split("-")[0]; 
+                        // merged.region = merged['adm1.name']; 
+                        merged.time = d3.time.format(model.time.format).parse(t); 
+
+                        // this sodomy will go away witht the proper input
+                        leaves
+                            .filter(function (l) { return l.time == t; })
+                            .forEach(function (dd) {
+                                indicator.forEach(function (ind) {
+                                    console.log(dd[ind]);
+                                    if (dd[ind]) merged[ind] = +dd[ind];
+                                });
+                            });
+
+                        collect.push(merged);
+                    });
+
+                    //sometimes certain indicator values are missing 
+                    //from the data points. here we fill them in
+                    return data.fillGaps(collect, indicator);
+                })
+                .entries(items);
+
+            nested.forEach(function (d) {
+                var latlng;
+                // d.region = d.values[0]['country.name'] || d.values[0]['geo.category'];
+                // find the lat and lng for this node
+                latlng = _.find(latlngs, function (l) { return l.name === d.key; });
+                if (latlng) {
+                    d.lat = latlng.lat;
+                    d.lng = latlng.lng;
+                }
+            });
+
+            // Filter data set eliminating entries without lat lng
+            // TODO: Hopefuly won't be needed with proper data set
+            nested = _.filter(nested, function (el) { return el.lat && el.lng; });
+
+            // save the nested data to the model
+            data.setItems("nested", nested);
+
+            // this flag should be reset together with changing model.show 
+            model.show.dataIsProcessed = true;
+            console.timeEnd('Process Nested Data');
         }
 
     });
