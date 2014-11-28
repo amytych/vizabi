@@ -153,6 +153,7 @@ define([
                 _this = this;
 
             //format
+            this.ui.format = this.model.unit;
             this.format = time_formats[this.ui.format];
 
             //scale

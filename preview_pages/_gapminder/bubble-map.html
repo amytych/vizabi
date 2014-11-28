@@ -67,33 +67,49 @@ $(function() {
     var options = {
         //state
         state: url.state || {
-                show: {
-                    geo: ['*'],
-                    geo_category: ['country'],
-                    indicator: ['pop'],
-                    unit: 1000000,
-                    scale: 'sqrt',
-                    visuals: ['bubble', 'shape'],
-                    render: 'offline',
-                    precision: 2,
-                    dataIsProcessed: false
-                },
-                bubble: {
-                    size: 10
-                },
-                //time properties
-                time: {
-                    start: 1990,
-                    end: 2012,
-                    step: 1,
-                    speed: 100,
-                    value: 1995,
-                    format: "%Y"
-                }
+            show: {
+                geo: ['*'],
+                geo_category: ['county'],
+                indicator: ['Probable cases'],
+                // indicator: ['Probable cases', 'Confirmed cases', 'Deaths', 'Suspected cases'],
+                scale: 'sqrt',
+                visuals: ['bubble', 'shape'],
+                render: 'online',
+                precision: 0,
+                unit: 1,
+                dataIsProcessed: false
             },
+            bubble: {
+                size: 10
+            },
+            //time properties
+            time: {
+                format: "%Y-%m-%d",
+                start: '2014-03-28',
+                end: '2014-10-18',
+                value: '2014-08-14',
+                unit: 'day',
+                step: 1,
+                speed: 200
+            }
+        },
+
+        language: url.lang || {
+            id: "en",
+            strings: {
+                en: {
+                    "title": "Map",
+                    "info/title": "Reported cases",
+                    "timeslider/play": "Play",
+                    "timeslider/pause": "Pause"
+                }
+            }
+        },
+
+        //path
         data: {
-                reader: "local-json",
-                path: "../../data-waffles/map/{{LANGUAGE}}/world/response.json"
+            reader: 'local-json',
+            path: '../../data-waffles/map/{{LANGUAGE}}/response.json'
         },
 
         // data_districtsGeo: {
@@ -110,19 +126,6 @@ $(function() {
         //     reader: "local-json",
         //     path: '../../data-waffles/map/{{LANGUAGE}}/world_geo.json'
         // },
-
-        //language properties
-        language: url.lang || {
-            id: "en",
-            strings: {
-                en: {
-                    "title": "Map",
-                    "info/title": "Population (millions)",
-                    "timeslider/play": "Play",
-                    "timeslider/pause": "Pause"
-                }
-            }
-        },
 
         bind: {
             'ready': function() {
@@ -150,7 +153,7 @@ function showEbolaCases() {
                 // indicator: ['Probable cases', 'Confirmed cases', 'Deaths', 'Suspected cases'],
                 scale: 'sqrt',
                 visuals: ['bubble', 'shape'],
-                render: 'offline',
+                render: 'online',
                 precision: 0,
                 unit: 1,
                 dataIsProcessed: false

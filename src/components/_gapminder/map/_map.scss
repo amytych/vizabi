@@ -2,6 +2,23 @@ $clrMarker: #f84e67;
 $clrMarkerStroke: darken($clrMarker, 50%);
 $clrMarkerHover: darken($clrMarker, 20%);
 
+.vzb-bm-holder {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  cursor: default;
+  background-color: #aacafd;
+}
+
+.vzb-bm-svg-layer {
+  position: absolute;
+  top: -4000px;
+  left: -4000px;
+  width: 8000px;
+  height: 8000px;
+}
+
 .vzb-bm-land {
   fill: #d1f7c7;
 }
@@ -18,23 +35,15 @@ $clrMarkerHover: darken($clrMarker, 20%);
 }
 
 .vzb-bm-shape {
-    stroke: rgba(0,0,0,.5);
-    stroke-opacity: .5;
-    fill-opacity: .5;
-    cursor: default;
-    // transition: fill-opacity .1s ease-in;
-}
+  stroke: rgba(0,0,0,.5);
+  stroke-opacity: .5;
+  fill-opacity: .5;
+  cursor: default;
+  // transition: fill-opacity .1s ease-in;
 
-.vzb-bm-shape.vzb-bm-hover {
-  fill-opacity: 1;
-}
-
-.vzb-bm-svg-layer {
-  position: absolute;
-  top: -4000px;
-  left: -4000px;
-  width: 8000px;
-  height: 8000px;
+  &.vzb-bm-hover {
+    fill-opacity: 1;
+  }
 }
 
 .vzb-bm-info {
@@ -54,35 +63,16 @@ $clrMarkerHover: darken($clrMarker, 20%);
     font-weight: 400;
 }
 
-.vzb-bm-holder {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  cursor: default;
-  background-color: #aacafd;
-}
-
 .vzb-bm-bubble {
   cursor: default;
   // fill: $clrMarker;
   stroke: $clrMarkerStroke;
   stroke-width: 1.5px;
   // transition: stroke .1s ease-in;
-}
 
-.vzb-bm-hover {
-    z-index: 5;
-    stroke: #fff;
-}
-
-.vzb-bm-inner {
-    fill: $clrMarkerHover;
-    stroke-width: 0;
-}
-
-.vzb-bm-inner1 {
-    fill: white;
+  &.vzb-bm-hover {
+      stroke: #fff;
+  }
 }
 
 .vzb-bm-tooltip {
