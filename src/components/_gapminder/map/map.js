@@ -147,8 +147,19 @@ define([
             this.mapHolder.on('mousemove.mapMouseMove', this.mapMousemoveHandler.bind(this));
 
             this.projection = function (coords) {
+                var dist;
+
                 coords = new google.maps.LatLng(coords[1], coords[0]);
                 coords = _this.gmProjection.fromLatLngToDivPixel(coords);
+
+                if (typeof _this.prevX != 'undefined') {
+                    // Check for a gigantic jump to prevent wrapping around the world
+                    dist = coords.x - _this.prevX;
+                    if (Math.abs(dist) > (_this.worldwidth * 0.9)) {
+                        coords.x += dist > 0 ? -_this.worldwidth : _this.worldwidth;
+                    }
+                }
+                _this.prevX = coords.x;
                 return [coords.x + 4000, coords.y + 4000];
             };
             this.path = d3.geo.path().projection(this.projection);
@@ -200,6 +211,8 @@ define([
 
                 gmOverlay.draw = function () {
                     _this.gmProjection = this.getProjection();
+                    _this.worldwidth = _this.gmProjection.getWorldWidth();
+
                     _this.drawShapes();
                     _this.drawBubbles();
                 };
@@ -289,8 +302,11 @@ define([
                 .attr('class', 'vzb-bm-area')
                 .attr('d', this.path);
 
-            // and zoom to it all
+            // …zoom to it all…
             this.zoomTo(combinedArea.data()[0]);
+
+            // …and remove it
+            combinedArea.remove();
         },
 
 
