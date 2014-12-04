@@ -23,6 +23,6 @@ define([
             //same constructor as parent, with same arguments
             this._super(values, parent, bind);
         }
-
+    });
     return DataModel;
 });

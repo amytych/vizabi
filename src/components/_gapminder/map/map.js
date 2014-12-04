@@ -18,6 +18,8 @@ define([
         init: function(config, context) {
             this.name = 'map';
             this.template = 'components/_gapminder/' + this.name + '/' + this.name;
+            this.model_expects = ['time', 'entities', 'marker', 'data'];
+
             this._super(config, context);
 
             // Some initial settings
@@ -29,7 +31,7 @@ define([
             // make sure that data processing is done after new data was loaded.
             // Previously it was called in toolModelValidation method, but there
             // the proper data set was not guaranteed.
-            this.model.data.on('load_end', this.processNestedData.bind(this));
+            // this.model.data.on('load_end', this.processNestedData.bind(this));
         },
 
         /*
@@ -37,9 +39,9 @@ define([
          * Executed after template is loaded
          * Ideally, it contains instantiations related to template
          */
-        postRender: function() {
+        domReady: function() {
             // Needed for change of the rendering mode
-            this.currentRender = this.model.show.render;
+            this.currentRender = this.model.marker.render;
 
             // Cache needed DOM nodes
             this.mapHolder   = this.element.select('#vzb-bm-holder');
@@ -54,16 +56,17 @@ define([
          * Executed whenever data is changed
          * Ideally, it contains only operations related to data events
          */
-        update: function() {
+        modelReady: function() {
+            console.log(this.model.marker.size);
             var model            = this.model,
-                show             = model.show,
+                marker           = model.marker,
                 radiusScaleRange = this.getRadiusScaleRange(),
                 colorScaleRange  = ['#7fb5f5', '#d70927'],
                 scale, extremes;
 
             // If render type has changed, the map have to be initialized again
-            if (this.currentRender !== show.render) {
-                this.currentRender = show.render;
+            if (this.currentRender !== marker.render) {
+                this.currentRender = marker.render;
                 this.destroyMap();
                 this.initializeMap();
                 return;
@@ -71,17 +74,17 @@ define([
 
             // Gather the data
             this.nestedData  = model.data.nested;
-            model.data.interpolate(this.nestedData, model.time.value, show.indicator);
+            model.data.interpolate(this.nestedData, model.time.value, marker.indicator);
 
             // Construct the scales
-            scale            = show.scale;
+            scale            = marker.scale;
             extremes         = this.getExtremes();
             this.radiusScale = d3.scale[scale]().domain(extremes).range(radiusScaleRange);
             this.colorScale  = d3.scale.linear().domain(extremes).range(colorScaleRange);
 
             // Gather other useful pieces
-            this.unit        = show.unit;
-            this.precision   = _.isUndefined(show.precision) ? 2 : show.precision;
+            this.unit        = marker.unit;
+            this.precision   = _.isUndefined(marker.precision) ? 2 : marker.precision;
 
             // Draw shapes and markers on the map
             this.drawShapes();
@@ -95,9 +98,11 @@ define([
          */
         resize: function() {
             if (!this.renderOnline()) {
+                this.mapWidth = this.mapHolder.node().offsetWidth;
+                this.mapHeight = this.mapHolder.node().offsetHeight;
                 this.svg
-                    .attr('width', this.mapHolder.node().offsetWidth)
-                    .attr('height', this.mapHolder.node().offsetHeight);
+                    .attr('width', this.mapWidth)
+                    .attr('height', this.mapHeight);
             }
         },
 
@@ -176,7 +181,7 @@ define([
                     this.model.data.interpolate(
                         this.model.data.nested,
                         this.model.time.value,
-                        this.model.show.indicator
+                        this.model.marker.indicator
             )));
         },
 
@@ -700,7 +705,7 @@ define([
         getRadiusScaleRange: function () {
             var min = 2,
                 max = 20,
-                state = this.model.bubble.size;
+                state = this.model.marker.size;
 
             max = (state < min) ? min : (state > max) ? max : state;
             return [min, max];
@@ -712,7 +717,7 @@ define([
          * @return {Boolean}
          */
         bubblesVisible: function () {
-            return this.model.show.visuals.indexOf('bubble') > -1;
+            return this.model.marker.visuals.indexOf('bubble') > -1;
         },
 
 
@@ -721,7 +726,7 @@ define([
          * @return {Boolean}
          */
         shapesVisible: function () {
-            return this.model.show.visuals.indexOf('shape') > -1;
+            return this.model.marker.visuals.indexOf('shape') > -1;
         },
 
 
@@ -730,7 +735,7 @@ define([
          * @return {Boolean}
          */
         renderOnline: function () {
-            return typeof google !== 'undefined' && this.model.show.render === 'online';
+            return typeof google !== 'undefined' && this.model.marker.render === 'online';
         },
 
 
@@ -763,7 +768,7 @@ define([
          * @return {Number} Found value
          */
         getValue: function (d) {
-            return d.now[this.model.show.indicator[0]] || 1;
+            return d.now[this.model.marker.indicator[0]] || 1;
         },
 
 
@@ -798,14 +803,14 @@ define([
         processNestedData: function () {
             var model     = this.model,
                 data      = model.data,
-                indicator = model.show.indicator,
+                indicator = model.marker.indicator,
                 items     = this.getData(),
                 latlngs   = this.getShapeLatLngData(),
                 dateMin, dateMax,
                 minValue, maxValue, nested;
 
             // Do nothing, if the data is processed already
-            if (model.show.dataIsProcessed) {
+            if (model.marker.dataIsProcessed) {
                 return;
             }
 
@@ -884,7 +889,7 @@ define([
             data.setItems("nested", nested);
 
             // this flag should be reset together with changing model.show 
-            model.show.dataIsProcessed = true;
+            model.marker.dataIsProcessed = true;
         }
     });
 

@@ -196,6 +196,7 @@ $(function() {
             id: "en",
             strings: {
                 en: {
+                    "title": "Bubble Chart Title",
                     "buttons/find": "Find",
                     "buttons/colors": "Colors",
                     "buttons/size": "Size",
@@ -246,10 +247,12 @@ $(function() {
     showState(options.state);
 });
 
+function play() {
     var options = {
         state: {
             time: {
                 playing: true
+            }
         }
     };
     myVizabi.setOptions(options);

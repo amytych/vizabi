@@ -131,7 +131,7 @@ define([
         updateTime: function() {
             var _this = this;
             
-            this.yearEl.text(d3.time.format("%d %b")(this.time));
+            this.yearEl.text(this.time);
             this.bubbles = this.bubbleContainer.selectAll('.vzb-bc-bubble')
                 .data(this.data);
         },
@@ -227,34 +227,17 @@ define([
             this.yAxis.scale(this.yScale)
                 .orient("left")
                 .tickSize(6, 0)
-                .ticks(Math.max(height / tick_spacing, 2))
-                //FIXME: for some reason .ticks() is not working for log scales. maybe d3 bug
-                .tickValues(this.scale[1] == "log"?[1, 5, 10, 50, 100, 500, 1000]:null);
+                .ticks(Math.max(height / tick_spacing, 2));
 
             this.xAxis.scale(this.xScale)
                 .orient("bottom")
                 .tickSize(6, 0)
-                .ticks(Math.max(width / tick_spacing, 2))
-                //FIXME: for some reason .ticks() is not working for log scales. maybe d3 bug
-                .tickValues(this.scale[0] == "log"?[1, 5, 10, 50, 100, 500, 1000]:null);
-            
+                .ticks(Math.max(width / tick_spacing, 2));
 
             this.xAxisEl.attr("transform", "translate(0," + height + ")");
 
             this.yAxisEl.call(this.yAxis);
             this.xAxisEl.call(this.xAxis);
-                                    
-            this.yTitleEl.text(this.indicator[1])
-                .attr("dx", "0.5em")
-                .attr("dy", "0.3em");
-            this.xTitleEl.text(this.indicator[0])
-                .attr("transform", "translate(" + width + "," + height + ")")
-                .attr("text-anchor", "end")
-                .attr("dy", "-0.5em");
-            this.rTitleEl.text("Size: " + this.indicator[2])
-                .attr("transform", "translate(" + width + "," + 0 + ") rotate(-90)")
-                .attr("text-anchor", "end")
-                .attr("dy", "0.3em");
 
             this.redrawDataPoints();
         },
