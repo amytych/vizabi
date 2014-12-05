@@ -18,7 +18,7 @@ define([
         init: function(config, context) {
             this.name = 'map';
             this.template = 'components/_gapminder/' + this.name + '/' + this.name;
-            this.model_expects = ['time', 'entities', 'marker', 'data'];
+            this.model_expects = ['time', 'entities', 'marker', 'world', 'shapes', 'latlng'];
 
             this._super(config, context);
 
@@ -26,6 +26,8 @@ define([
             this.hovered      = undefined;
             this.mapScale     = 1;
             this.bubbleStroke = 1.5;
+
+            this.initializeMapOnce = _.once(this.initializeMap);
 
             // TODO: This is not ideal, but it's currently the only way to
             // make sure that data processing is done after new data was loaded.
@@ -40,6 +42,8 @@ define([
          * Ideally, it contains instantiations related to template
          */
         domReady: function() {
+            this.model.on('ready', this.initializeMap.bind(this));
+
             // Needed for change of the rendering mode
             this.currentRender = this.model.marker.render;
 
@@ -48,7 +52,6 @@ define([
             this.infoDisplay = this.element.select('#vzb-bm-info-text');
             this.tooltip     = this.element.select('#vzb-bm-tooltip');
 
-            this.initializeMap();
         },
 
         /*
@@ -57,38 +60,38 @@ define([
          * Ideally, it contains only operations related to data events
          */
         modelReady: function() {
-            console.log(this.model.marker.size);
-            var model            = this.model,
-                marker           = model.marker,
-                radiusScaleRange = this.getRadiusScaleRange(),
-                colorScaleRange  = ['#7fb5f5', '#d70927'],
-                scale, extremes;
+            // this.initializeMapOnce();
+            // var model            = this.model,
+            //     marker           = model.marker,
+            //     radiusScaleRange = this.getRadiusScaleRange(),
+            //     colorScaleRange  = ['#7fb5f5', '#d70927'],
+            //     scale, extremes;
 
-            // If render type has changed, the map have to be initialized again
-            if (this.currentRender !== marker.render) {
-                this.currentRender = marker.render;
-                this.destroyMap();
-                this.initializeMap();
-                return;
-            }
+            // // If render type has changed, the map have to be initialized again
+            // if (this.currentRender !== marker.render) {
+            //     this.currentRender = marker.render;
+            //     this.destroyMap();
+            //     this.initializeMap();
+            //     return;
+            // }
 
-            // Gather the data
-            this.nestedData  = model.data.nested;
-            model.data.interpolate(this.nestedData, model.time.value, marker.indicator);
+            // // Gather the data
+            // this.nestedData  = model.data.nested;
+            // // model.data.interpolate(this.nestedData, model.time.value, marker.indicator);
 
-            // Construct the scales
-            scale            = marker.scale;
-            extremes         = this.getExtremes();
-            this.radiusScale = d3.scale[scale]().domain(extremes).range(radiusScaleRange);
-            this.colorScale  = d3.scale.linear().domain(extremes).range(colorScaleRange);
+            // // Construct the scales
+            // scale            = marker.scale;
+            // extremes         = this.getExtremes();
+            // this.radiusScale = d3.scale[scale]().domain(extremes).range(radiusScaleRange);
+            // this.colorScale  = d3.scale.linear().domain(extremes).range(colorScaleRange);
 
-            // Gather other useful pieces
-            this.unit        = marker.unit;
-            this.precision   = _.isUndefined(marker.precision) ? 2 : marker.precision;
+            // // Gather other useful pieces
+            // this.unit        = marker.unit;
+            // this.precision   = _.isUndefined(marker.precision) ? 2 : marker.precision;
 
             // Draw shapes and markers on the map
-            this.drawShapes();
-            this.drawBubbles();
+            // this.drawShapes();
+            // this.drawBubbles();
         },
 
         /*
@@ -263,7 +266,7 @@ define([
                 .call(this.zoom)
                 .call(this.zoom.event);
 
-            this.update();
+            // this.update();
         },
 
 
@@ -285,8 +288,8 @@ define([
          * @return {Void}
          */
         drawWorld: function () {
-            var worldData = this.getWorldGeoData(),
-                shapeData = this.getShapeGeoData(),
+            var worldData = this.getWorldGeoData()[0].value,
+                shapeData = this.getShapeGeoData()[0].value,
                 combinedArea;
 
             // Draw land
@@ -501,9 +504,7 @@ define([
          * @return {Object} topoJSON with coordinates
          */
         getShapeGeoData: function () {
-            return _.find(this.model.data.getItems(), function (d) {
-                return d.objects && d.objects.shapes;
-            });
+            return this.model.shapes.topojson.getItems();
         },
 
 
@@ -511,10 +512,8 @@ define([
          * Get data for the world coordinates
          * @return {Object} topoJSON with the world coordinates
          */
-        getWorldGeoData: function () {
-            return _.find(this.model.data.getItems(), function (d) {
-                return d.objects && d.objects.countries;
-            });
+        getWorldGeoData: function () {293
+            return this.model.world.topojson.getItems();
         },
 
 

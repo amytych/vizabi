@@ -85,16 +85,15 @@ $(function() {
                     filter: {
                         'adm1': ['*']
                     }
-                    // filter: {
-                    //     geo: ['*'],
-                    // indicator: ['Probable cases'],
-                    // indicator: ['Probable cases', 'Confirmed cases', 'Deaths', 'Suspected cases'],
-                    // scale: 'sqrt',
-                    // visuals: ['bubble', 'shape'],
-                    // render: 'online',
-                    // precision: 0,
-                    // unit: 1,
-                    // dataIsProcessed: false
+                }]
+            },
+
+            entities_world: {
+                show: [{
+                    dim: 'geo',
+                    filter: {
+                        'geo': ['*']
+                    }
                 }]
             },
 
@@ -103,7 +102,7 @@ $(function() {
                 shape: "circle",
                 render: {
                     use: "value",
-                    value: "online"
+                    value: "offline"
                 },
                 label: {
                     use: "property",
@@ -118,7 +117,60 @@ $(function() {
                     use: "value",
                     value: ['bubble', 'shape']
                 }
+            },
+
+            world: {
+                topojson: {
+                    hook_to: ['entities_world', 'language', 'data_world'],
+                    use: "indicator",
+                    value: "topojson"
+                }
+            },
+
+            shapes: {
+                topojson: {
+                    hook_to: ['entities_world', 'language', 'data_shapes'],
+                    use: "indicator",
+                    value: "topojson"
+                }
+            },
+
+            latlng: {
+                lat: {
+                    hook_to: ['entities', 'language', 'data_latlng'],
+                    use: "indicator",
+                    value: "lat"
+                },
+                lng: {
+                    hook_to: ['entities', 'language', 'data_latlng'],
+                    use: "indicator",
+                    value: "lng"
+                }
             }
+        },
+
+        //path
+        data: {
+            reader: 'local-json',
+            path: '../../data-waffles/map/{{LANGUAGE}}/response.json'
+        },
+
+        //path
+        data_shapes: {
+            reader: 'local-json',
+            path: '../../data-waffles/map/{{LANGUAGE}}/response_1.json'
+        },
+
+        //path
+        data_latlng: {
+            reader: 'local-json',
+            path: '../../data-waffles/map/{{LANGUAGE}}/response_2.json'
+        },
+
+        //path
+        data_world: {
+            reader: 'local-json',
+            path: '../../data-waffles/map/{{LANGUAGE}}/response_3.json'
         },
 
         language: url.lang || {
@@ -131,12 +183,6 @@ $(function() {
                     "timeslider/pause": "Pause"
                 }
             }
-        },
-
-        //path
-        data: {
-            reader: 'local-json',
-            path: '../../data-waffles/map/{{LANGUAGE}}/response.json'
         },
 
         bind: {
