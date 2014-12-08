@@ -16,7 +16,7 @@ define([
             }, {
                 component: '_gapminder/map',
                 placeholder: '.vzb-tool-viz',
-                model: ['state.time', 'state.entities', 'state.marker', 'state.world', 'state.shapes', 'state.latlng']
+                model: ['state.time', 'state.entities', 'state.marker', 'state.world', 'state.shapes', 'state.latlng', 'state.chart_options']
             }, {
                 component: '_gapminder/timeslider',
                 placeholder: '.vzb-tool-timeslider',

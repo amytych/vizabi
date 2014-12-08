@@ -18,7 +18,7 @@ define([
         init: function(config, context) {
             this.name = 'map';
             this.template = 'components/_gapminder/' + this.name + '/' + this.name;
-            this.model_expects = ['time', 'entities', 'marker', 'world', 'shapes', 'latlng'];
+            this.model_expects = ['time', 'entities', 'marker', 'world', 'shapes', 'latlng', 'chartOptions'];
 
             this._super(config, context);
 
@@ -42,10 +42,12 @@ define([
          * Ideally, it contains instantiations related to template
          */
         domReady: function() {
+            var _this = this;
             this.model.on('ready', this.initializeMap.bind(this));
+            // this.model.on('rea;dy', this.processNestedData.bind(this));
 
             // Needed for change of the rendering mode
-            this.currentRender = this.model.marker.render;
+            this.currentRender = this.model.chartOptions.render.getValue();
 
             // Cache needed DOM nodes
             this.mapHolder   = this.element.select('#vzb-bm-holder');
@@ -60,38 +62,39 @@ define([
          * Ideally, it contains only operations related to data events
          */
         modelReady: function() {
-            // this.initializeMapOnce();
-            // var model            = this.model,
-            //     marker           = model.marker,
-            //     radiusScaleRange = this.getRadiusScaleRange(),
-            //     colorScaleRange  = ['#7fb5f5', '#d70927'],
-            //     scale, extremes;
+            var model            = this.model,
+                marker           = model.marker,
+                radiusScaleRange = this.getRadiusScaleRange(),
+                colorScaleRange  = ['#7fb5f5', '#d70927'],
+                scale, extremes;
 
-            // // If render type has changed, the map have to be initialized again
-            // if (this.currentRender !== marker.render) {
-            //     this.currentRender = marker.render;
-            //     this.destroyMap();
-            //     this.initializeMap();
-            //     return;
-            // }
+            // If render type has changed, the map have to be initialized again
+            if (this.currentRender !== model.chartOptions.render.getValue()) {
+                this.currentRender = marker.render;
+                this.destroyMap();
+                this.initializeMap();
+                return;
+            }
 
             // // Gather the data
             // this.nestedData  = model.data.nested;
             // // model.data.interpolate(this.nestedData, model.time.value, marker.indicator);
+            this.items = this.model.marker.label.getItems();
+            this.sizes = this.model.marker.size.getItems();
 
-            // // Construct the scales
-            // scale            = marker.scale;
-            // extremes         = this.getExtremes();
-            // this.radiusScale = d3.scale[scale]().domain(extremes).range(radiusScaleRange);
-            // this.colorScale  = d3.scale.linear().domain(extremes).range(colorScaleRange);
+            // Construct the scales
+            scale            = marker.size.scale;
+            extremes         = this.getExtremes();
+            this.radiusScale = d3.scale[scale]().domain(extremes).range(radiusScaleRange);
+            this.colorScale  = d3.scale.linear().domain(extremes).range(colorScaleRange);
 
             // // Gather other useful pieces
-            // this.unit        = marker.unit;
-            // this.precision   = _.isUndefined(marker.precision) ? 2 : marker.precision;
+            this.unit        = marker.size.unit;
+            this.precision   = _.isUndefined(marker.size.precision) ? 2 : marker.size.precision;
 
             // Draw shapes and markers on the map
-            // this.drawShapes();
-            // this.drawBubbles();
+            this.drawShapes();
+            this.drawBubbles();
         },
 
         /*
@@ -143,6 +146,10 @@ define([
         initializeGMap: function () {
             var _this = this;
 
+            // Do nothing if the map is initialised already
+            if (!!this.map) return;
+
+
             this.map = new google.maps.Map(this.mapHolder.node(), {
                 mapTypeId: google.maps.MapTypeId.TERRAIN,
                 mapTypeControl: false,
@@ -179,13 +186,7 @@ define([
          * @return {Void}
          */
         fitGMapBounds: function () {
-            this.map.fitBounds(
-                this.getMapBounds(
-                    this.model.data.interpolate(
-                        this.model.data.nested,
-                        this.model.time.value,
-                        this.model.marker.indicator
-            )));
+            this.map.fitBounds(this.getMapBounds(this.getShapeLatLngData()));
         },
 
 
@@ -333,13 +334,13 @@ define([
             }
 
             bubble = this.svgLayer.selectAll('.vzb-bm-bubble')
-                .data(this.bubblesVisible() ? this.nestedData : [], function (d) { return _this.getSlugKey(d.key); });
+                .data(this.bubblesVisible() ? this.model.marker.size.getItems() : [], function (d) { return _this.getSlugKey(d['adm1.name']); });
 
             // Create new bubble
             bubble
                 .enter().append('svg:circle')
                 .attr('class', 'vzb-bm-bubble')
-                .attr('data-name', function (d) { return _this.getSlugKey(d.key); })
+                .attr('data-name', function (d) { return _this.getSlugKey(d['adm1.name']); })
                 .attr('fill', this.getColor.bind(this))
                 .attr('r', this.getRadius.bind(this));
 
@@ -367,7 +368,9 @@ define([
          * @return {d3 selection} positioned d3 selection
          */
         positionBubbles: function (d, mapComponent) {
-            var pos = mapComponent.projection([d.lng, d.lat]);
+            var item = _.find(mapComponent.getShapeLatLngData(), function (l) { return l.key === d['adm1.name']; });
+            if (!item) console.log(d);
+            var pos = mapComponent.projection([item.lng, item.lat]);
 
             return d3.select(this)
                 .attr('cx', pos[0])
@@ -380,6 +383,8 @@ define([
          * @return {Void}
          */
         drawShapes: function () {
+            var timerIdentifier = +new Date();
+            console.time(timerIdentifier+'::Draw Shapes');
             var _this     = this,
                 shapes = [],
                 shape;
@@ -416,6 +421,7 @@ define([
                     var d = _this.findD(d.properties.name);
                     return d ? _this.getColor(d) : 'transparent';
                 });
+            console.timeEnd(timerIdentifier+'::Draw Shapes');
         },
 
 
@@ -475,7 +481,7 @@ define([
          */
         showInfo: function (d) {
             d = d.key ? d : this.findD(d.properties.name);
-            this.infoDisplay.text((+this.getValue(d) / this.unit).toFixed(this.precision));
+            this.infoDisplay.text((+this.model.marker.size.getValue(d) / this.unit).toFixed(this.precision));
         },
 
 
@@ -493,9 +499,19 @@ define([
          * @return {Object} object with shape lat&lng coordinates
          */
         getShapeLatLngData: function () {
-            return _.find(this.model.data.getItems(), function (d) {
-                return _.isArray(d) && d[0].lat && d[0].lng;
+            var _this = this,
+            latlngs = [],
+            lngs = _this.model.latlng.lng.getItems();
+            
+            this.model.latlng.lat.getItems().forEach(function (item, index) {
+                latlngs.push({
+                    key: item.name,
+                    lat: item.value,
+                    lng: lngs[index].value
+                });
             });
+            
+            return latlngs;
         },
 
 
@@ -504,7 +520,7 @@ define([
          * @return {Object} topoJSON with coordinates
          */
         getShapeGeoData: function () {
-            return this.model.shapes.topojson.getItems();
+            return this.model.shapes.topojson.getItems()[0].value;
         },
 
 
@@ -524,9 +540,7 @@ define([
          * @return {Array} Array with the data
          */
         getData: function () {
-            return _.find(this.model.data.getItems(), function (d) {
-                return _.isArray(d) && d[0].time;
-            });
+            // return this.model.marker.
         },
 
 
@@ -536,8 +550,8 @@ define([
          */
         getExtremes: function () {
             return [
-                d3.min(this.nestedData, this.getValue.bind(this)),
-                d3.max(this.nestedData, this.getValue.bind(this))
+                d3.min(this.sizes, function (size) { return size.value; }),
+                d3.max(this.sizes, function (size) { return size.value; })
             ];
         },
 
@@ -704,7 +718,7 @@ define([
         getRadiusScaleRange: function () {
             var min = 2,
                 max = 20,
-                state = this.model.marker.size;
+                state = this.model.marker.size.max;
 
             max = (state < min) ? min : (state > max) ? max : state;
             return [min, max];
@@ -716,7 +730,7 @@ define([
          * @return {Boolean}
          */
         bubblesVisible: function () {
-            return this.model.marker.visuals.indexOf('bubble') > -1;
+            return this.model.chartOptions.visuals.getValue().indexOf('bubble') > -1;
         },
 
 
@@ -725,7 +739,7 @@ define([
          * @return {Boolean}
          */
         shapesVisible: function () {
-            return this.model.marker.visuals.indexOf('shape') > -1;
+            return this.model.chartOptions.visuals.getValue().indexOf('shape') > -1;
         },
 
 
@@ -734,7 +748,7 @@ define([
          * @return {Boolean}
          */
         renderOnline: function () {
-            return typeof google !== 'undefined' && this.model.marker.render === 'online';
+            return typeof google !== 'undefined' && this.model.chartOptions.render.getValue() === 'online';
         },
 
 
@@ -745,7 +759,7 @@ define([
          * @return {Object} found data node or undefined
          */
         findD: function (name) {
-            return _.find(this.nestedData, {key: name});
+            return _.find(this.items, {value: name});
         },
 
 
@@ -767,7 +781,7 @@ define([
          * @return {Number} Found value
          */
         getValue: function (d) {
-            return d.now[this.model.marker.indicator[0]] || 1;
+            return this.model.marker.size.getValue(d) || 1;
         },
 
 
@@ -800,95 +814,97 @@ define([
          * @return {Void} It produces a side effect, adding 'nested' property to this.model.data
          */
         processNestedData: function () {
-            var model     = this.model,
-                data      = model.data,
-                indicator = model.marker.indicator,
-                items     = this.getData(),
-                latlngs   = this.getShapeLatLngData(),
-                dateMin, dateMax,
-                minValue, maxValue, nested;
+            console.log(this.model.marker.label.getItems());dsdsa
+            // console.log(this.model.marker.size.getItems());
+            // var model     = this.model,
+            //     data      = model.data,
+            //     indicator = model.marker.indicator,
+            //     items     = this.getData(),
+            //     latlngs   = this.getShapeLatLngData(),
+            //     dateMin, dateMax,
+            //     minValue, maxValue, nested;
 
-            // Do nothing, if the data is processed already
-            if (model.marker.dataIsProcessed) {
-                return;
-            }
+            // // Do nothing, if the data is processed already
+            // if (this.model.chartOptions.isDataProcessed.getValue()) {
+            //     return;
+            // }
 
-            // save max and min values to the model (each is a vector for all indicators)
-            minValue = indicator.map(function(ind) {
-             return d3.min(items, function(d) {return +d[ind];});
-            });
-            maxValue = indicator.map(function(ind) {
-             return d3.max(items, function(d) {return +d[ind];});
-            });
-            data.setItems("minValue", minValue);
-            data.setItems("maxValue", maxValue);
+            // // save max and min values to the model (each is a vector for all indicators)
+            // minValue = indicator.map(function(ind) {
+            //  return d3.min(items, function(d) {return +d[ind];});
+            // });
+            // maxValue = indicator.map(function(ind) {
+            //  return d3.max(items, function(d) {return +d[ind];});
+            // });
+            // data.setItems("minValue", minValue);
+            // data.setItems("maxValue", maxValue);
 
-            dateMin = data.getLimits('time').min;
-            dateMax = data.getLimits('time').max;
+            // dateMin = data.getLimits('time').min;
+            // dateMax = data.getLimits('time').max;
 
-            if (model.time.start < dateMin) {
-                model.time.start = dateMin;
-            }
-            if (model.time.end > dateMax) {
-                model.time.end = dateMax;
-            }
+            // if (model.time.start < dateMin) {
+            //     model.time.start = dateMin;
+            // }
+            // if (model.time.end > dateMax) {
+            //     model.time.end = dateMax;
+            // }
 
-            // group data points by geo.name
-            nested = d3.nest()
-                .key(function (d) {return d["adm1.name"] || d["geo.name"]})
-                .rollup(function (leaves) {
-                    var collect = [];
-                    var times = _.uniq(leaves.map(function (d) { return d.time; })).sort(d3.ascending);
+            // // group data points by geo.name
+            // nested = d3.nest()
+            //     .key(function (d) {return d["adm1.name"] || d["geo.name"]})
+            //     .rollup(function (leaves) {
+            //         var collect = [];
+            //         var times = _.uniq(leaves.map(function (d) { return d.time; })).sort(d3.ascending);
 
-                    //merge different indicators with the same time points
-                    //this will not be needed when i will 
-                    //TODO: connect new data format
-                    times.forEach(function(t){
-                        var merged = {};
-                        merged.name = leaves[0]["adm1.name"] || leaves[0]["geo.name"]; 
-                        merged.category = (leaves[0]["geo.category"]) ? leaves[0]["geo.category"][0] : 'county';
-                        // merged.region = merged.name.split("-")[0]; 
-                        // merged.region = merged['adm1.name']; 
-                        merged.time = d3.time.format(model.time.format).parse(t); 
+            //         //merge different indicators with the same time points
+            //         //this will not be needed when i will 
+            //         //TODO: connect new data format
+            //         times.forEach(function(t){
+            //             var merged = {};
+            //             merged.name = leaves[0]["adm1.name"] || leaves[0]["geo.name"]; 
+            //             merged.category = (leaves[0]["geo.category"]) ? leaves[0]["geo.category"][0] : 'county';
+            //             // merged.region = merged.name.split("-")[0]; 
+            //             // merged.region = merged['adm1.name']; 
+            //             merged.time = d3.time.format(model.time.format).parse(t); 
 
-                        // this sodomy will go away witht the proper input
-                        leaves
-                            .filter(function (l) { return l.time == t; })
-                            .forEach(function (dd) {
-                                indicator.forEach(function (ind) {
-                                    if (dd[ind]) merged[ind] = +dd[ind];
-                                });
-                            });
+            //             // this sodomy will go away witht the proper input
+            //             leaves
+            //                 .filter(function (l) { return l.time == t; })
+            //                 .forEach(function (dd) {
+            //                     indicator.forEach(function (ind) {
+            //                         if (dd[ind]) merged[ind] = +dd[ind];
+            //                     });
+            //                 });
 
-                        collect.push(merged);
-                    });
+            //             collect.push(merged);
+            //         });
 
-                    //sometimes certain indicator values are missing 
-                    //from the data points. here we fill them in
-                    return data.fillGaps(collect, indicator);
-                })
-                .entries(items);
+            //         //sometimes certain indicator values are missing 
+            //         //from the data points. here we fill them in
+            //         return data.fillGaps(collect, indicator);
+            //     })
+            //     .entries(items);
 
-            nested.forEach(function (d) {
-                var latlng;
-                // d.region = d.values[0]['country.name'] || d.values[0]['geo.category'];
-                // find the lat and lng for this node
-                latlng = _.find(latlngs, function (l) { return l.name === d.key; });
-                if (latlng) {
-                    d.lat = latlng.lat;
-                    d.lng = latlng.lng;
-                }
-            });
+            // nested.forEach(function (d) {
+            //     var latlng;
+            //     // d.region = d.values[0]['country.name'] || d.values[0]['geo.category'];
+            //     // find the lat and lng for this node
+            //     latlng = _.find(latlngs, function (l) { return l.name === d.key; });
+            //     if (latlng) {
+            //         d.lat = latlng.lat;
+            //         d.lng = latlng.lng;
+            //     }
+            // });
 
-            // Filter data set eliminating entries without lat lng
-            // TODO: Hopefuly won't be needed with proper data set
-            nested = _.filter(nested, function (el) { return el.lat && el.lng; });
+            // // Filter data set eliminating entries without lat lng
+            // // TODO: Hopefuly won't be needed with proper data set
+            // nested = _.filter(nested, function (el) { return el.lat && el.lng; });
 
-            // save the nested data to the model
-            data.setItems("nested", nested);
+            // // save the nested data to the model
+            // data.setItems("nested", nested);
 
-            // this flag should be reset together with changing model.show 
-            model.marker.dataIsProcessed = true;
+            // // this flag should be reset together with changing model.show 
+            // this.model.chartOptions.isDataProcessed.getValue() = true;
         }
     });
 

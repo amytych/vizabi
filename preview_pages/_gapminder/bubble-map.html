@@ -81,7 +81,7 @@ $(function() {
 
             entities: {
                 show: [{
-                    dim: 'adm1',
+                    dim: 'adm1.name',
                     filter: {
                         'adm1': ['*']
                     }
@@ -97,13 +97,33 @@ $(function() {
                 }]
             },
 
+            entities_shapes: {
+                show: [{
+                    dim: 'name',
+                    filter: {
+                        'name': ['*']
+                    }
+                }]
+            },
+
+            chart_options: {
+                render: {
+                    use: "value",
+                    value: "online"
+                },
+                visuals: {
+                    use: "value",
+                    value: ['bubble', 'shape']
+                },
+                isDataProcessed: {
+                    use: "value",
+                    value: false
+                }
+            },
+
             marker: {
                 type: "geometry",
                 shape: "circle",
-                render: {
-                    use: "value",
-                    value: "offline"
-                },
                 label: {
                     use: "property",
                     value: "adm1.name"
@@ -111,11 +131,10 @@ $(function() {
                 size: {
                     use: "indicator",
                     value: "Confirmed cases",
-                    scale: "sqrt"
-                },
-                visuals: {
-                    use: "value",
-                    value: ['bubble', 'shape']
+                    scale: "sqrt",
+                    unit: 1,
+                    precision: 2,
+                    max: 20
                 }
             },
 
@@ -137,12 +156,12 @@ $(function() {
 
             latlng: {
                 lat: {
-                    hook_to: ['entities', 'language', 'data_latlng'],
+                    hook_to: ['entities_shapes', 'language', 'data_latlng'],
                     use: "indicator",
                     value: "lat"
                 },
                 lng: {
-                    hook_to: ['entities', 'language', 'data_latlng'],
+                    hook_to: ['entities_shapes', 'language', 'data_latlng'],
                     use: "indicator",
                     value: "lng"
                 }
