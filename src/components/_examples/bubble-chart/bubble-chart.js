@@ -66,8 +66,6 @@ define([
                 },
                 "load_end":  function() {
                     console.log("Finished loading!");
-                    _this.updateShow();
-                    _this.redrawDataPoints();
                 },
                 "ready": function() {
                     console.log("Model ready!");
@@ -108,6 +106,8 @@ define([
          */
         modelReady: function(evt) {
             if (!this.isDataPreprocessed) this.preprocessData();
+            this.updateShow();
+            this.redrawDataPoints();
         },
 
 
@@ -258,7 +258,8 @@ define([
                 .attr("class", "vzb-bc-bubble");
 
             //update selection
-            var speed = this.model.time.speed;
+            var speed = (this.model.time.playing) ? this.model.time.speed : 0;
+
             var some_selected = (_this.model.entities.select.length > 0);
 
             this.bubbles
