@@ -27,13 +27,11 @@ define([
             this.mapScale     = 1;
             this.bubbleStroke = 1.5;
 
-            this.initializeMapOnce = _.once(this.initializeMap);
-
             // TODO: This is not ideal, but it's currently the only way to
             // make sure that data processing is done after new data was loaded.
             // Previously it was called in toolModelValidation method, but there
             // the proper data set was not guaranteed.
-            // this.model.data.on('load_end', this.processNestedData.bind(this));
+            // this.model.data.on('load_end', this.processData.bind(this));
         },
 
         /*
@@ -43,8 +41,12 @@ define([
          */
         domReady: function() {
             var _this = this;
+            this.model.on('ready', this.processData.bind(this));
             this.model.on('ready', this.initializeMap.bind(this));
-            // this.model.on('rea;dy', this.processNestedData.bind(this));
+
+            // this.model.time.on('change:value', function () {
+            //     console.log('dupa');
+            // });
 
             // Needed for change of the rendering mode
             this.currentRender = this.model.chartOptions.render.getValue();
@@ -61,7 +63,8 @@ define([
          * Executed whenever data is changed
          * Ideally, it contains only operations related to data events
          */
-        modelReady: function() {
+        modelReady: function(evt) {
+            console.log(evt);
             var model            = this.model,
                 marker           = model.marker,
                 radiusScaleRange = this.getRadiusScaleRange(),
@@ -79,8 +82,8 @@ define([
             // // Gather the data
             // this.nestedData  = model.data.nested;
             // // model.data.interpolate(this.nestedData, model.time.value, marker.indicator);
-            this.items = this.model.marker.label.getItems();
-            this.sizes = this.model.marker.size.getItems();
+            this.items = this.model.marker.label.getItems({time: d3.time.format(this.model.time.format)(this.model.time.value)});
+            this.sizes = this.model.marker.size.getItems({time: d3.time.format(this.model.time.format)(this.model.time.value)});
 
             // Construct the scales
             scale            = marker.size.scale;
@@ -334,7 +337,7 @@ define([
             }
 
             bubble = this.svgLayer.selectAll('.vzb-bm-bubble')
-                .data(this.bubblesVisible() ? this.model.marker.size.getItems() : [], function (d) { return _this.getSlugKey(d['adm1.name']); });
+                .data(this.bubblesVisible() ? this.sizes : [], function (d) { return _this.getSlugKey(d['adm1.name']); });
 
             // Create new bubble
             bubble
@@ -368,8 +371,7 @@ define([
          * @return {d3 selection} positioned d3 selection
          */
         positionBubbles: function (d, mapComponent) {
-            var item = _.find(mapComponent.getShapeLatLngData(), function (l) { return l.key === d['adm1.name']; });
-            if (!item) console.log(d);
+            var item = _.find(mapComponent.getShapeLatLngData(), {key: d['adm1.name']});
             var pos = mapComponent.projection([item.lng, item.lat]);
 
             return d3.select(this)
@@ -383,8 +385,6 @@ define([
          * @return {Void}
          */
         drawShapes: function () {
-            var timerIdentifier = +new Date();
-            console.time(timerIdentifier+'::Draw Shapes');
             var _this     = this,
                 shapes = [],
                 shape;
@@ -421,7 +421,6 @@ define([
                     var d = _this.findD(d.properties.name);
                     return d ? _this.getColor(d) : 'transparent';
                 });
-            console.timeEnd(timerIdentifier+'::Draw Shapes');
         },
 
 
@@ -550,8 +549,8 @@ define([
          */
         getExtremes: function () {
             return [
-                d3.min(this.sizes, function (size) { return size.value; }),
-                d3.max(this.sizes, function (size) { return size.value; })
+                d3.min(this.sizes, function (size) { return size.value || 1; }),
+                d3.max(this.sizes, function (size) { return size.value || 1; })
             ];
         },
 
@@ -813,16 +812,20 @@ define([
          * it's the only place that always guarantees proper data set
          * @return {Void} It produces a side effect, adding 'nested' property to this.model.data
          */
-        processNestedData: function () {
-            console.log(this.model.marker.label.getItems());dsdsa
-            // console.log(this.model.marker.size.getItems());
-            // var model     = this.model,
+        processData: function () {
+            var _this     = this,
+                model     = this.model,
             //     data      = model.data,
-            //     indicator = model.marker.indicator,
-            //     items     = this.getData(),
-            //     latlngs   = this.getShapeLatLngData(),
+                // indicator = model.marker.indicator,
+                // items     = this.getData(),
+                latlngs   = this.getShapeLatLngData();
             //     dateMin, dateMax,
             //     minValue, maxValue, nested;
+
+            // Filter data set eliminating entries without lat lng
+            // TODO: Hopefuly won't be needed with proper data set
+            this.items = _.filter(this.items, function (item) { return _.find(latlngs, {key: item.value }) });
+            this.sizes = _.filter(this.sizes, function (item) { return _.find(latlngs, {key: item['adm1.name'] }) });
 
             // // Do nothing, if the data is processed already
             // if (this.model.chartOptions.isDataProcessed.getValue()) {

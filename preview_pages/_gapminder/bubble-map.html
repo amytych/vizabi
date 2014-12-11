@@ -139,29 +139,28 @@ $(function() {
             },
 
             world: {
+                hook_to: ['entities_world', 'language', 'data_world'],
                 topojson: {
-                    hook_to: ['entities_world', 'language', 'data_world'],
                     use: "indicator",
                     value: "topojson"
                 }
             },
 
             shapes: {
+                hook_to: ['entities_world', 'language', 'data_shapes'],
                 topojson: {
-                    hook_to: ['entities_world', 'language', 'data_shapes'],
                     use: "indicator",
                     value: "topojson"
                 }
             },
 
             latlng: {
+                hook_to: ['entities_shapes', 'language', 'data_latlng'],
                 lat: {
-                    hook_to: ['entities_shapes', 'language', 'data_latlng'],
                     use: "indicator",
                     value: "lat"
                 },
                 lng: {
-                    hook_to: ['entities_shapes', 'language', 'data_latlng'],
                     use: "indicator",
                     value: "lng"
                 }
