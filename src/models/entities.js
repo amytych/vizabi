@@ -47,20 +47,32 @@ define([
         },
 
         selectEntity: function(d) {
-            var value = d[this.getDimension()],
-                select_array = this.select;
-            if(this.isSelected(d)) {
-                select_array = _.without(select_array, value);
+            var select_array = this.select,
+            index_of_element = select_array.indexOf(d.geo);
+
+            if (index_of_element >= 0) {
+                select_array.splice(index_of_element, 1);
             } else {
-                select_array.push(value);
+                select_array.push(d.geo);
             }
             this.set("select", select_array);
         },
 
+        hoverEntity: function(d) {
+            var hover_array = this.hover,
+            index_of_element = hover_array.indexOf(d.geo);
+
+            if (index_of_element >= 0) {
+                hover_array.splice(index_of_element, 1);
+            } else {
+                hover_array.push(d.geo);
+            }
+            this.set("hover", hover_array);
+        },
+
         isSelected: function(d) {
-            var value = d[this.getDimension()];
             var select_array = this.select;
-            if(_.indexOf(select_array, value) !== -1) {
+            if (_.indexOf(select_array, d.value) !== -1) {
                 return true;
             } else {
                 return false;

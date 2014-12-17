@@ -1,0 +1,22 @@
+[
+    {
+        "dim": "geo",
+        "filter": "geo.cat"
+    },
+    {
+        "dim": "geo",
+        "filter": "geo.region"
+    },
+    {
+        "dim": "dim_2_example",
+        "filter": "filter_1_example"
+    },
+    {
+        "dim": "dim_2_example",
+        "filter": "filter_2_example"
+    },
+    {
+        "dim": "dim_2_example",
+        "filter": "filter_3_example"
+    }
+]

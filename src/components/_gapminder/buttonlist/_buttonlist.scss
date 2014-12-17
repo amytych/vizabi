@@ -9,8 +9,12 @@ $vzb-button-color-title-active: $vzb-button-color;
 $vzb-button-color-border: #DBE8EB;
 .vzb-buttonlist {
 
-    @import '../bubble-size/bubble-size';
 
+    /*TODO: make this automatic! */
+    @import 'dialogs/select/select';
+    @import '../bubble-size/bubble-size';
+    @import '../../_examples/dropdown/dropdown';
+    
     @include box-sizing(border-box);
     @include absoluteAll;
     text-align: center;
@@ -145,3 +149,5 @@ $vzb-button-color-border: #DBE8EB;
         }
     }
 }
+
+

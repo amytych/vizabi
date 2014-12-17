@@ -1,0 +1,87 @@
+.vzb-dialog-modal {
+    .vzb-dialog-content {
+        .vzb-select {
+            dd, dt {
+                margin: 0px;
+                padding: 0px;
+            }
+            ul {
+                margin: -1px 0 0 0;
+            }
+            dd {
+                position: relative;
+            }
+            a {
+                color: #919197;
+                text-decoration: none;
+                outline: none;
+                font-size: 12px;
+                &:visited {
+                    color: #4B98AA;
+                    text-decoration: none;
+                    outline: none;
+                    font-size: 12px;
+                }
+            }
+            dt a {
+                background-color: #F6F8FA;
+                display: block;
+                padding: 2px 15px 2px 0px;
+                min-height: 35px;
+                line-height: 80%;
+                overflow: hidden;
+                border: 0;
+                width: 100%;
+                border: 1px solid #F6F8FA;
+                span {
+                    cursor: pointer;
+                    display: inline-block;
+                    padding: 0 3px 2px 0;
+                }
+                p {
+                    font-size: 12px;
+                    //margin-top: 13px;
+                    margin-left: 10px;
+                }
+                &:focus {
+                    border: 1px solid #a1a1a1;
+                }
+            }
+            dd ul {
+                background-color: #FFFFFF;
+                border: 0;
+                color: #919191;
+                display: block;
+                left: 0px;
+                padding: 2px 15px 2px 0px;
+                top: 2px;
+                width: 100%;
+                list-style: none;
+                margin-top: 7px;
+                li > label {
+                    display: block;
+                    &:hover {
+                        color: #4B98AA;
+                    }
+                }
+            }
+            span.value {
+                display: none;
+            }
+            dd ul li a {
+                padding: 5px;
+                display: block;
+                &:hover {
+                    background-color: #fff;
+                }
+            }
+        }
+        .vzb-selected-entities span {
+            cursor: pointer;
+            display: inline-block;
+            padding: 0 3px 2px 0;
+        }
+
+        @import '../../../../_examples/text-display/text-display';
+    }
+}

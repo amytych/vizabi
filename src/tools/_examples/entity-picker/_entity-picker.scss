@@ -1,0 +1,9 @@
+@import '../../tool';
+
+.vzb-tool-entity-picker {
+	@extend .vzb-tool;
+
+	@import '../../../components/_gapminder/buttonlist/buttonlist';
+	@import '../../../components/_gapminder/entity-picker/entity-picker';
+	@import '../../../components/_examples/entity-display/entity-display';
+}

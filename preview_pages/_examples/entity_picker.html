@@ -1,0 +1,205 @@
+<!-- @@include('../assets/_header.tpl', {"title": "Entity Picker"}) -->
+
+<div class="container">
+    <div class="buttons">
+
+        <!-- @@include('../assets/_menu.tpl') -->
+
+        <label>|</label>
+
+        <div id="dropdown-size" class="wrapper-dropdown" tabindex="1">
+            <span>Size</span>
+            <ul class="dropdown">
+                <li><a onclick="phoneSize('bubble-chart')">Mobile Portrait</a>
+                </li>
+                <li><a onclick="phoneSize('bubble-chart', 'landscape')">Mobile Landscape</a>
+                </li>
+                <li><a onclick="randomSize('bubble-chart')">Random Size</a>
+                </li>
+                <li><a onclick="fullSize('bubble-chart')">Full Screen</a>
+                </li>
+            </ul>
+        </div>
+
+        <button onclick="randomSize('bubble-chart')">RANDOM</button>
+
+        <label>|</label>
+
+        <div id="dropdown-options" class="wrapper-dropdown" tabindex="1">
+            <span>OPTIONS</span>
+            <ul class="dropdown">
+                <li><a onclick="manyCountries()">Many Countries</a>
+                </li>
+                <li><a onclick="setState()">WORLD - 2000 </a>
+                </li>
+                <li><a onclick="changeIndicator()">SWE, NOR, ZAF</a>
+                </li>
+            </ul>
+        </div>
+
+        <div id="dropdown-language" class="wrapper-dropdown" tabindex="1">
+            <span>Language</span>
+            <ul class="dropdown">
+                <li><a onclick="setLanguage('en')">English</a>
+                </li>
+                <li><a onclick="setLanguage('pt')">Portuguese</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="entity-picker" class="placeholder"></div>
+
+</div>
+<div class="aux">
+    <button onclick="shareLink()">SHARE LINK</button>
+
+    <p>Current State:</p>
+    <pre id="state" class="json_box" contentEditable="true"></pre>
+    <button onclick="setCurrentState()">SET STATE</button>
+    <p>Current Query:</p>
+    <pre id="query" class="json_box"></pre>
+</div>
+</body>
+<script>
+var myVizabi;
+
+$(function() {
+
+    var options = {
+        state: url.state || {
+            entities: {
+                show: {
+                    dim: 'geo',
+                    filter: {
+                        'geo.category': ['country'],
+                        'geo.region': ['*']
+                    }
+                },
+                select: ['swe', 'nor', 'fin', 'bra', 'usa', 'chn', 'jpn', 'zaf', 'ind', 'ago'],
+                hover: ['swe'],
+                entity_picker: {
+                    visible: true
+                }
+            },
+            scale: ['linear', 'linear', 'sqrt'],
+            unit: [1, 1000000000, 1000],
+            size: 50,
+            time: {
+                start: 1990,
+                end: 2012,
+                value: 1990,
+                step: 1,
+                speed: 300
+            },
+
+
+            row: {
+                label: {
+                    use: "property",
+                    value: "geo.name"
+                }
+            }
+        },
+
+
+        //data properties
+        data: {
+            reader: 'local-json',
+            path: '../../data-waffles/examples/{{LANGUAGE}}/basic-indicators.json'
+        },
+
+        //language properties
+        language: url.lang || {
+            id: "en",
+            strings: {
+                en: {
+                    "title": "Bar Chart Title",
+                    "buttons/find": "Find",
+                    "buttons/colors": "Colors",
+                    "buttons/size": "Size",
+                    "buttons/more_options": "Options",
+                    "buttons/select": "Select"
+                },
+                pt: {
+                    "title": "Título do Bar Chart",
+                    "buttons/find": "Encontre",
+                    "buttons/colors": "Cores",
+                    "buttons/size": "Tamanho",
+                    "buttons/more_options": "Opções",
+                    "buttons/select": "selecionar"
+                }
+            }
+        },
+
+        bind: {
+            'ready': function() {
+                parseURL();
+            },
+            'change:state': function(evt, vals) {
+                showState(vals.state);
+            },
+            'change:language': function(evt, vals) {
+                if (vals.language.id === "en") {
+                    languageButton.attr('onclick', "language('pt')");
+                    languageButton.text("SET LANGUAGE: PT");
+                } else {
+                    languageButton.attr('onclick', "language('en')");
+                    languageButton.text("SET LANGUAGE: EN");
+                }
+            }
+        }
+    };
+
+    showState(options.state);
+    myVizabi = new Vizabi("_examples/entity-picker", "#entity-picker", options);
+});
+
+
+function play() {
+    var options = {
+        state: {
+            time: {
+                playing: true
+            }
+        }
+    };
+    myVizabi.setOptions(options);
+}
+
+function pause() {
+    var options = {
+        state: {
+            time: {
+                playing: false
+            }
+        }
+    };
+    myVizabi.setOptions(options);
+}
+
+function language(lang) {
+    var options = {
+        language: {
+            id: lang
+        }
+    };
+    myVizabi.setOptions(options);
+}
+
+function hook(hook, use, value, domain) {
+    var options = {
+        state: { row: {} }
+    };
+    options.state.row[hook] = {
+        use: use,
+        value: value
+    };
+
+    if(domain) options.state.row[hook].domain = domain;
+
+    myVizabi.setOptions(options);
+}
+</script>
+
+<!-- @@include('../assets/_footer.tpl') -->

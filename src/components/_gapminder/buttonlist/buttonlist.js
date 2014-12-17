@@ -26,6 +26,10 @@ define([
                 title: "buttons/size",
                 icon: "circle"
             },
+            'select': {
+                title: 'buttons/select',
+                icon: 'hand-o-up'
+            },
             '_default': {
                 title: "Button",
                 icon: "asterisk"
@@ -110,11 +114,6 @@ define([
                 } else {
                     _this.openDialog(id);
                 }
-            });
-
-            close_buttons = d3.selectAll("[data-click='closeDialog']");
-            close_buttons.on('click', function() {
-                _this.closeAllDialogs();
             });
         },
 
