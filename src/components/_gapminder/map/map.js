@@ -435,7 +435,7 @@ define([
 
             this.tooltip
                 .classed('vzb-hidden', false)
-                .html(d.key || d.properties.name);
+                .html(this.getLabel(d));
 
             // Position the tooltip at the top center of the cursor
             mouse[0] -= this.tooltip.node().offsetWidth / 2;
@@ -480,7 +480,7 @@ define([
          */
         showInfo: function (d) {
             d = d.key ? d : this.findD(d.properties.name);
-            this.infoDisplay.text((+this.model.marker.size.getValue(d) / this.unit).toFixed(this.precision));
+            this.infoDisplay.text((this.getValue(d) / this.unit).toFixed(this.precision));
         },
 
 
@@ -781,6 +781,16 @@ define([
          */
         getValue: function (d) {
             return this.model.marker.size.getValue(d) || 1;
+        },
+
+
+        /**
+         * Get the label for the indicator
+         * @param  {Object} d Data object for which to obtain the value
+         * @return {String} Indicator's name
+         */
+        getLabel: function (d) {
+            return d['adm1.name'] || d.properties.name
         },
 
 

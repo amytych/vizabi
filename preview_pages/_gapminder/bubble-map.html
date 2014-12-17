@@ -1,4 +1,4 @@
-<!-- @@include('../assets/_header.tpl', {"title": "Hello World - Multiple States"}) -->
+<!-- @@include('../assets/_header.tpl', {"title": "Map"}) -->
 
 <div class="container">
     <div class="buttons">
@@ -80,30 +80,30 @@ $(function() {
             },
 
             entities: {
-                show: [{
+                show: {
                     dim: 'adm1.name',
                     filter: {
                         'adm1': ['*']
                     }
-                }]
+                }
             },
 
             entities_world: {
-                show: [{
+                show: {
                     dim: 'geo',
                     filter: {
                         'geo': ['*']
                     }
-                }]
+                }
             },
 
             entities_shapes: {
-                show: [{
+                show: {
                     dim: 'name',
                     filter: {
                         'name': ['*']
                     }
-                }]
+                }
             },
 
             chart_options: {
